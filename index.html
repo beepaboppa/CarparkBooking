@@ -740,18 +740,20 @@
       projectId: "carpark-booking-583cc",
       storageBucket: "carpark-booking-583cc.firebasestorage.app",
       messagingSenderId: "253260648727",
-      appId: "1:253260648727:web:6be9941a57240e37996752"
+      appId: "1:253260648727:web:6be9941a57240e37996752",
+      databaseURL: "https://carpark-booking-583cc-default-rtdb.firebaseio.com/"
     };
 
     const USERS = [
       { name: "James", email: "james@example.com", weeklyTokens: 1 },
-      { name: "Tupac", email: "sarah@example.com", weeklyTokens: 1 },
-      { name: "M. Jackson", email: "alex@example.com", weeklyTokens: 1 }
+      { name: "Sarah", email: "sarah@example.com", weeklyTokens: 1 },
+      { name: "Alex", email: "alex@example.com", weeklyTokens: 1 }
     ];
 
     const CARPARKS = ["44", "45", "126"];
-    const USER_COOKIE = "carpark_selected_user_email_v3";
-    const BOOKINGS_KEY = "carpark_bookings_demo_v3";
+    const USER_COOKIE = "carpark_selected_user_email_v4";
+    const USER_STORAGE_KEY = "carpark_selected_user_email_v4";
+    const BOOKINGS_KEY = "carpark_bookings_demo_v4";
 
     const els = {
       app: document.querySelector("#app"),
@@ -762,7 +764,7 @@
       statusBox: document.querySelector("#statusBox"),
       userSelect: document.querySelector("#userSelect"),
       selectedEmail: document.querySelector("#selectedEmail"),
-      dbModeNote: document.querySelector("#dbModeNote"),
+      presenceLine: document.querySelector("#dbModeNote"),
       allowanceWeek: document.querySelector("#allowanceWeek"),
       tokenText: document.querySelector("#tokenText"),
       prevWeekBtn: document.querySelector("#prevWeekBtn"),
@@ -787,7 +789,10 @@
     let pendingRemoval = null;
     let usingFirebase = false;
     let db = null;
+    let realtimeDb = null;
     let unsubscribe = null;
+    let presenceUnsubscribe = null;
+    let currentPresenceRef = null;
     let weekTimerInterval = null;
 
     init();
@@ -798,6 +803,7 @@
       await setupStorage();
       wireEvents();
       await loadBookings();
+      startPresence();
       render();
     }
 
@@ -805,21 +811,23 @@
       const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
 
       if (!hasFirebaseConfig) {
-        els.dbModeNote.textContent = "Demo mode: bookings are stored only in this browser.";
+        els.presenceLine.textContent = "Demo mode: bookings are stored only in this browser.";
         return;
       }
 
       try {
         const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
         const { getFirestore, doc, onSnapshot, setDoc, runTransaction } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+        const { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp, remove } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
 
         const app = initializeApp(firebaseConfig);
         db = { firestore: getFirestore(app), doc, onSnapshot, setDoc, runTransaction };
+        realtimeDb = { db: getDatabase(app), ref, set, onValue, onDisconnect, serverTimestamp, remove };
         usingFirebase = true;
-        els.dbModeNote.textContent = "Shared mode: bookings are synced online using Firebase.";
+        els.presenceLine.textContent = "Shared mode";
       } catch (error) {
         console.error(error);
-        els.dbModeNote.textContent = "Firebase could not load, so this is running in local demo mode.";
+        els.presenceLine.textContent = "Firebase could not load, so this is running in local demo mode.";
       }
     }
 
@@ -830,7 +838,7 @@
     }
 
     function loadUserFromCookie() {
-      const savedEmail = getCookie(USER_COOKIE);
+      const savedEmail = getSavedSelectedEmail();
       const valid = savedEmail && USERS.some(user => user.email === savedEmail);
 
       if (valid) {
@@ -850,13 +858,16 @@
     function wireEvents() {
       els.userSelect.addEventListener("change", () => {
         if (!els.userSelect.value) {
+          clearSavedSelectedEmail();
+          clearCurrentPresence();
           openNameGate();
           render();
           return;
         }
-        setSelectedUserCookie(els.userSelect.value);
+        saveSelectedEmail(els.userSelect.value);
         els.gateUserSelect.value = els.userSelect.value;
         syncGateEmail();
+        startPresence();
         render();
       });
 
@@ -867,9 +878,10 @@
           showToast("Select your name first.");
           return;
         }
-        setSelectedUserCookie(els.gateUserSelect.value);
+        saveSelectedEmail(els.gateUserSelect.value);
         els.userSelect.value = els.gateUserSelect.value;
         closeNameGate();
+        startPresence();
         render();
       });
 
@@ -885,6 +897,9 @@
         await claimCarpark(getDateKey(new Date()), carpark);
         els.freeDialog.close();
       });
+
+      window.addEventListener("pagehide", clearCurrentPresence);
+      window.addEventListener("beforeunload", clearCurrentPresence);
 
       els.confirmRemoveBtn.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -939,7 +954,7 @@
         const docRef = db.doc(db.firestore, "carparkBookings", "allBookings");
 
         try {
-          await db.runTransaction(db.firestore, async (transaction) => {
+          const updatedBookings = const updatedBookings = await db.runTransaction(db.firestore, async (transaction) => {
             const snap = await transaction.get(docRef);
             const current = snap.exists() ? snap.data().bookings || {} : {};
             const existing = current?.[dateKey]?.[carpark];
@@ -951,8 +966,11 @@
             current[dateKey] ??= {};
             current[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
             transaction.set(docRef, { bookings: current });
+            return current;
           });
 
+          bookings = updatedBookings;
+          render();
           showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
         } catch (error) {
           showToast(error.message || "Could not claim carpark.");
@@ -1012,6 +1030,69 @@
       await saveBookings();
       showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
       render();
+    }
+
+
+    function startPresence() {
+      if (!realtimeDb) return;
+
+      const user = getSelectedUser();
+      if (!user) {
+        els.presenceLine.textContent = usingFirebase ? "Shared mode" : "Demo mode";
+        return;
+      }
+
+      clearCurrentPresence();
+
+      const key = presenceKey(user.email);
+      currentPresenceRef = realtimeDb.ref(realtimeDb.db, `presence/${key}`);
+
+      realtimeDb.onDisconnect(currentPresenceRef).remove();
+
+      realtimeDb.set(currentPresenceRef, {
+        name: user.name,
+        email: user.email,
+        online: true,
+        openedAt: realtimeDb.serverTimestamp(),
+        lastSeen: realtimeDb.serverTimestamp()
+      });
+
+      const presenceListRef = realtimeDb.ref(realtimeDb.db, "presence");
+
+      presenceUnsubscribe?.();
+      presenceUnsubscribe = realtimeDb.onValue(presenceListRef, (snapshot) => {
+        const onlineUsers = Object.values(snapshot.val() || {})
+          .filter(item => item && item.online)
+          .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+
+        renderPresence(onlineUsers);
+      }, (error) => {
+        console.error(error);
+        els.presenceLine.textContent = "Shared mode";
+      });
+    }
+
+    async function clearCurrentPresence() {
+      if (!realtimeDb || !currentPresenceRef) return;
+
+      try {
+        await realtimeDb.remove(currentPresenceRef);
+      } catch (error) {
+        console.warn("Presence removal failed", error);
+      }
+
+      currentPresenceRef = null;
+    }
+
+    function renderPresence(onlineUsers) {
+      const names = [...new Set(onlineUsers.map(user => user.name).filter(Boolean))];
+      els.presenceLine.textContent = names.length
+        ? `Online now: ${names.join(", ")}`
+        : "Shared mode";
+    }
+
+    function presenceKey(email) {
+      return email.replace(/[.#$\/\[\]]/g, "_");
     }
 
     function buildClaimRecord(carpark, user, date, costsToken) {
@@ -1152,7 +1233,7 @@
           parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${isToday && canClaimThisCell ? "today-available" : ""}`;
           parkEl.innerHTML = `
             <div class="park-no"><span class="park-word">Carpark </span>${park}</div>
-            <div class="park-state"><span class="available-full">Available</span><span class="available-short">Free</span></div>
+            <div class="park-state">Free</div>
           `;
 
           if (canClaimThisCell) {
@@ -1278,8 +1359,18 @@
       els.selectedEmail.textContent = user ? user.email : "";
     }
 
-    function setSelectedUserCookie(email) {
+    function saveSelectedEmail(email) {
+      localStorage.setItem(USER_STORAGE_KEY, email);
       setCookie(USER_COOKIE, email, 365);
+    }
+
+    function getSavedSelectedEmail() {
+      return localStorage.getItem(USER_STORAGE_KEY) || getCookie(USER_COOKIE);
+    }
+
+    function clearSavedSelectedEmail() {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      setCookie(USER_COOKIE, "", -1);
     }
 
     function setCookie(name, value, days) {
