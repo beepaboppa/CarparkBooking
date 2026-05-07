@@ -381,8 +381,8 @@
     }
 
     .park.available.bookable {
-      background: var(--green);
-      border-color: #166534;
+      background: linear-gradient(135deg, #15803d, #166534);
+      border-color: #14532d;
       cursor: pointer;
       color: #ffffff;
     }
@@ -395,7 +395,7 @@
     .park.available.bookable:hover {
       transform: translateY(-1px);
       box-shadow: 0 8px 18px rgba(21, 128, 61, 0.18);
-      background: #166534;
+      background: linear-gradient(135deg, #166534, #14532d);
     }
 
     .park.available.today-available {
@@ -437,23 +437,36 @@
     }
 
     .park-no {
-      font-weight: 900;
-      font-size: 0.95rem;
+      font-weight: 500;
+      font-size: 1.04rem;
       color: var(--text);
     }
 
     .park-state {
       color: var(--muted);
-      font-size: 0.96rem;
+      font-size: 1.04rem;
       line-height: 1.2;
       font-weight: 800;
     }
 
     .park-state.taken-name {
       color: var(--text);
-      font-size: 0.98rem;
+      font-size: 1.04rem;
       font-weight: 900;
       line-height: 1.2;
+    }
+
+    .taken-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .taken-row button {
+      padding: 5px 10px;
+      font-size: 0.82rem;
     }
 
     .claim-row {
@@ -723,9 +736,9 @@
     };
 
     const USERS = [
-      { name: "John Doe", email: "james@example.com", weeklyTokens: 1 },
-      { name: "Tupac", email: "sarah@example.com", weeklyTokens: 1 },
-      { name: "Michael Jackson", email: "alex@example.com", weeklyTokens: 1 }
+      { name: "James", email: "james@example.com", weeklyTokens: 1 },
+      { name: "Sarah", email: "sarah@example.com", weeklyTokens: 1 },
+      { name: "Alex", email: "alex@example.com", weeklyTokens: 1 }
     ];
 
     const CARPARKS = ["44", "45", "126"];
@@ -1161,19 +1174,17 @@
           parkEl.className = "park taken";
           parkEl.innerHTML = `
             <div class="park-no">Carpark ${park}</div>
-            <div class="park-state taken-name">${escapeHtml(claim.person || "Unknown")}</div>
+            <div class="taken-row">
+              <span class="park-state taken-name">${escapeHtml(claim.person || "Unknown")}</span>
+            </div>
           `;
 
-          const row = document.createElement("div");
-          row.className = "claim-row";
-
+          const takenRow = parkEl.querySelector(".taken-row");
           const removeBtn = document.createElement("button");
           removeBtn.className = "danger";
           removeBtn.textContent = "Remove";
           removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
-
-          row.appendChild(removeBtn);
-          parkEl.appendChild(row);
+          takenRow.appendChild(removeBtn);
         } else {
           const costsToken = dateKey !== todayKey;
           const alreadyClaimedThisDay = user ? userUsedOnDate(bookings, dateKey, user.email) : false;
