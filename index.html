@@ -239,7 +239,6 @@
     }
 
     button:hover { transform: translateY(-1px); }
-
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -247,17 +246,11 @@
     }
 
     .primary { background: var(--blue); }
-
     .gold {
       background: linear-gradient(135deg, #fde68a, var(--gold));
       box-shadow: 0 8px 18px rgba(251, 191, 36, 0.18);
     }
-
-    .danger {
-      background: var(--red);
-      color: #fff;
-    }
-
+    .danger { background: var(--red); color: #fff; }
     .ghost {
       background: #f8fafc;
       border: 1px solid var(--line);
@@ -388,6 +381,9 @@
       font-size: 1rem;
       color: var(--text);
     }
+
+    .day-name-short { display: none; }
+    .available-short { display: none; }
 
     .date {
       color: var(--text);
@@ -632,15 +628,36 @@
     }
 
     @media (max-width: 620px) {
-      body { padding: 12px; }
-      .days { grid-template-columns: 1fr; }
+      body { padding: 8px; }
+      h1 { font-size: 1.6rem; }
+      .subtitle { display: none; }
+      .booking-card { padding: 8px; gap: 8px; }
+      .top-strip { gap: 8px; }
+      .compact-card { padding: 9px 10px; }
+      .week-nav { grid-template-columns: 1fr; gap: 6px; }
       .week-center { flex-direction: column; }
       .week-range,
-      .week-context { font-size: 1.08rem; }
+      .week-context { font-size: 1.02rem; }
       .today-panel { width: 100%; }
       .today-main { flex-direction: column; }
       .name-row { grid-template-columns: 1fr; }
       .db-mode-inline { white-space: normal; }
+      .days { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+      .day.weekend { display: none; }
+      .day { padding: 5px 3px; gap: 5px; border-radius: 10px; }
+      .day-name { font-size: 0.72rem; }
+      .date { font-size: 0.72rem; }
+      .day-name-full { display: none; }
+      .day-name-short { display: inline; }
+      .park { padding: 7px 2px; gap: 1px; border-radius: 8px; }
+      .park-word { display: none; }
+      .park-no { font-size: 0.82rem; }
+      .park-state,
+      .park-state.taken-name { font-size: 0.78rem; }
+      .available-full { display: none; }
+      .available-short { display: inline; }
+      .taken-row { gap: 4px; }
+      .taken-row button { padding: 3px 5px; font-size: 0.58rem; }
     }
   </style>
 </head>
@@ -1194,7 +1211,10 @@
       const head = document.createElement("div");
       head.className = "day-head";
       head.innerHTML = `
-        <div class="day-name">${date.toLocaleDateString(undefined, { weekday: "long" })}</div>
+        <div class="day-name">
+          <span class="day-name-full">${date.toLocaleDateString(undefined, { weekday: "long" })}</span>
+          <span class="day-name-short">${date.toLocaleDateString(undefined, { weekday: "short" })}</span>
+        </div>
         <div class="date">${formatShortDate(date)}</div>
       `;
       day.appendChild(head);
@@ -1206,7 +1226,7 @@
         if (claim) {
           parkEl.className = "park taken";
           parkEl.innerHTML = `
-            <div class="park-no">Carpark ${park}</div>
+            <div class="park-no"><span class="park-word">Carpark </span>${park}</div>
             <div class="taken-row">
               <span class="park-state taken-name">${escapeHtml(claim.person || "Unknown")}</span>
             </div>
@@ -1226,8 +1246,8 @@
 
           parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${isToday && canClaimThisCell ? "today-available" : ""}`;
           parkEl.innerHTML = `
-            <div class="park-no">Carpark ${park}</div>
-            <div class="park-state">Available</div>
+            <div class="park-no"><span class="park-word">Carpark </span>${park}</div>
+            <div class="park-state"><span class="available-full">Available</span><span class="available-short">Free</span></div>
           `;
 
           if (canClaimThisCell) {
@@ -1417,10 +1437,4 @@
       return String(value)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-  </script>
-</body>
-</html>
+        .rep
