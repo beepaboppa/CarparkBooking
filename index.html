@@ -592,7 +592,7 @@
       }
 
       const docRef = db.doc(db.firestore, "carparkBookings", "allBookings");
-      await db.setDoc(docRef, { bookings }, { merge: true });
+      await db.setDoc(docRef, { bookings });
     }
 
     async function claimCarpark(dateKey, carpark) {
@@ -627,7 +627,7 @@
             current[dateKey] ??= {};
             current[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
 
-            transaction.set(docRef, { bookings: current }, { merge: true });
+            transaction.set(docRef, { bookings: current });
           });
           showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
         } catch (err) {
@@ -673,7 +673,7 @@
             delete current[dateKey][carpark];
             if (Object.keys(current[dateKey]).length === 0) delete current[dateKey];
 
-            transaction.set(docRef, { bookings: current }, { merge: true });
+            transaction.set(docRef, { bookings: current });
           });
           showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
         } catch (err) {
