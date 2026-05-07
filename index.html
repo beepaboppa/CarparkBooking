@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Carpark Booking</title>
+  <title>Carpark Booking System</title>
   <style>
     :root {
       --bg: #f6f8fc;
@@ -37,6 +37,14 @@
     .app {
       width: min(1320px, 100%);
       margin: 0 auto;
+      transition: filter 160ms ease, opacity 160ms ease;
+    }
+
+    .app.locked {
+      filter: blur(8px);
+      opacity: 0.55;
+      pointer-events: none;
+      user-select: none;
     }
 
     .hero {
@@ -91,6 +99,13 @@
       line-height: 1.2;
     }
 
+    .allowance-week {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: 300px 1fr;
@@ -102,12 +117,11 @@
     }
 
     .week-nav {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
       gap: 8px;
       align-items: center;
-      justify-content: space-between;
       margin-bottom: 10px;
-      flex-wrap: wrap;
     }
 
     button,
@@ -126,6 +140,7 @@
       font-weight: 900;
       font-size: 0.86rem;
       transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
+      white-space: nowrap;
     }
 
     button:hover { transform: translateY(-1px); }
@@ -149,6 +164,18 @@
       font-size: 1.05rem;
     }
 
+    .week-range-wrap {
+      text-align: center;
+      display: grid;
+      gap: 2px;
+    }
+
+    .week-context {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
     .rule-box {
       border-radius: 14px;
       background: #f8fafc;
@@ -166,6 +193,10 @@
       font-weight: 900;
       color: var(--text);
       font-size: 0.92rem;
+    }
+
+    .week-status-label {
+      color: var(--text);
     }
 
     .week-status-badge {
@@ -264,6 +295,12 @@
       box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16) inset;
     }
 
+    .day.weekend {
+      background: #eef2f7;
+      border-color: #d7dee8;
+      opacity: 0.82;
+    }
+
     .day-head {
       display: flex;
       justify-content: space-between;
@@ -284,7 +321,16 @@
     }
 
     .park.available { border-color: rgba(34, 197, 94, 0.45); }
-    .park.taken { border-color: rgba(239, 68, 68, 0.42); opacity: 0.92; }
+    .park.taken {
+      background: rgba(239, 68, 68, 0.10);
+      border-color: rgba(239, 68, 68, 0.35);
+      opacity: 1;
+    }
+
+    .day.weekend .park {
+      background: #e5eaf1;
+      border-color: #d1d8e3;
+    }
 
     .park-no { font-weight: 900; font-size: 0.9rem; }
     .park-state { color: var(--muted); font-size: 0.78rem; line-height: 1.25; }
@@ -313,7 +359,7 @@
       opacity: 0;
       pointer-events: none;
       transition: all 180ms ease;
-      z-index: 10;
+      z-index: 30;
     }
 
     .toast.show { transform: translateY(0); opacity: 1; }
@@ -336,6 +382,36 @@
 
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 
+    .name-gate {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(248, 250, 252, 0.50);
+      z-index: 20;
+    }
+
+    .name-gate.visible { display: flex; }
+
+    .name-gate-card {
+      width: min(420px, 100%);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .name-gate-title {
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
     .db-note {
       margin-top: 12px;
       color: var(--muted);
@@ -347,26 +423,29 @@
       .hero, .grid { grid-template-columns: 1fr; }
       .days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .status-card { min-width: 0; }
+      .week-nav { grid-template-columns: 1fr 1fr; }
+      .week-range-wrap { grid-column: 1 / -1; order: -1; }
     }
 
     @media (max-width: 620px) {
       body { padding: 12px; }
       .days { grid-template-columns: 1fr; }
-      .week-nav { align-items: stretch; }
-      .week-nav button { flex: 1; }
+      .week-nav { grid-template-columns: 1fr; }
+      .week-nav button { width: 100%; }
       .today-panel { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <main class="app">
+  <main id="app" class="app locked">
     <section class="hero">
       <div>
-        <h1>Carpark Claims</h1>
-        <p class="subtitle">Claim carparks 44, 45 or 126. Same-day unclaimed spaces are free and do not use a weekly token. Future-day claims use the selected person’s weekly token allowance.</p>
+        <h1>Carpark Booking System</h1>
+        <p class="subtitle">Select your name, choose an available space, and manage weekly bookings.</p>
       </div>
       <aside class="status-card">
         <div class="small-label">Weekly allowance</div>
+        <div id="allowanceWeek" class="allowance-week">Loading...</div>
         <div id="tokenText" class="token">Loading...</div>
       </aside>
     </section>
@@ -374,7 +453,6 @@
     <section class="grid">
       <aside class="card">
         <div class="small-label">Booking controls</div>
-        <div class="week-title" id="activeWeekTitle">This week</div>
         <div class="rule-box" id="ruleBox">Loading...</div>
 
         <div class="token-actions">
@@ -390,8 +468,12 @@
 
       <section class="card">
         <div class="week-nav">
-          <button id="prevWeekBtn" class="ghost">← Last Week</button>
-          <div class="week-title" id="weekRange"></div>
+          <button id="prevWeekBtn" class="ghost">← Previous Week</button>
+          <div class="week-range-wrap">
+            <div class="week-title" id="weekRange"></div>
+            <div class="week-context" id="weekContext"></div>
+          </div>
+          <button id="jumpThisWeekBtn" class="ghost">Jump to This Week</button>
           <button id="nextWeekBtn" class="ghost">Next Week →</button>
         </div>
 
@@ -407,6 +489,22 @@
       </section>
     </section>
   </main>
+
+  <section id="nameGate" class="name-gate visible" aria-modal="true" role="dialog">
+    <div class="name-gate-card">
+      <div>
+        <div class="small-label">Before you start</div>
+        <div class="name-gate-title">Select your name</div>
+      </div>
+      <p class="modal-copy">Your selection will be stored in this browser so the site can remember you next time.</p>
+      <div class="field">
+        <label for="gateUserSelect">Your name</label>
+        <select id="gateUserSelect"></select>
+        <div id="gateSelectedEmail" class="selected-email"></div>
+      </div>
+      <button id="confirmNameBtn" class="primary">Continue</button>
+    </div>
+  </section>
 
   <dialog id="freeDialog">
     <form method="dialog" class="modal-content" id="freeForm">
@@ -458,18 +556,25 @@
     ];
 
     const CARPARKS = ["44", "45", "126"];
-    const USER_KEY = "carpark_selected_user_email_v2";
+    const USER_COOKIE = "carpark_selected_user_email_v3";
     const BOOKINGS_KEY = "carpark_bookings_demo_v2";
-    const VIEW_WEEK_KEY = "carpark_view_week_offset_v1";
 
     const els = {
+      app: document.querySelector("#app"),
+      nameGate: document.querySelector("#nameGate"),
+      gateUserSelect: document.querySelector("#gateUserSelect"),
+      gateSelectedEmail: document.querySelector("#gateSelectedEmail"),
+      confirmNameBtn: document.querySelector("#confirmNameBtn"),
+      allowanceWeek: document.querySelector("#allowanceWeek"),
       tokenText: document.querySelector("#tokenText"),
       selectedEmail: document.querySelector("#selectedEmail"),
       userSelect: document.querySelector("#userSelect"),
       prevWeekBtn: document.querySelector("#prevWeekBtn"),
       nextWeekBtn: document.querySelector("#nextWeekBtn"),
+      jumpThisWeekBtn: document.querySelector("#jumpThisWeekBtn"),
       activeWeekTitle: document.querySelector("#activeWeekTitle"),
       weekRange: document.querySelector("#weekRange"),
+      weekContext: document.querySelector("#weekContext"),
       ruleBox: document.querySelector("#ruleBox"),
       daysGrid: document.querySelector("#daysGrid"),
       todayPanel: document.querySelector("#todayPanel"),
@@ -485,7 +590,7 @@
     };
 
     let bookings = {};
-    let weekOffset = Number(localStorage.getItem(VIEW_WEEK_KEY) || 0);
+    let weekOffset = 0;
     let pendingRemoval = null;
     let db = null;
     let unsubscribe = null;
@@ -494,7 +599,8 @@
     init();
 
     async function init() {
-      populateUserSelect();
+      populateUserSelects();
+      loadUserFromCookie();
       await setupStorage();
       wireEvents();
       await loadBookings();
@@ -522,33 +628,68 @@
       }
     }
 
-    function populateUserSelect() {
-      const savedEmail = localStorage.getItem(USER_KEY);
-      els.userSelect.innerHTML = USERS.map((user) => `<option value="${escapeHtml(user.email)}">${escapeHtml(user.name)}</option>`).join("");
+    function populateUserSelects() {
+      const options = `<option value="">Select name...</option>` + USERS.map((user) => `<option value="${escapeHtml(user.email)}">${escapeHtml(user.name)}</option>`).join("");
+      els.userSelect.innerHTML = options;
+      els.gateUserSelect.innerHTML = options;
+    }
 
-      if (savedEmail && USERS.some((user) => user.email === savedEmail)) {
+    function loadUserFromCookie() {
+      const savedEmail = getCookie(USER_COOKIE);
+      const savedUserExists = savedEmail && USERS.some((user) => user.email === savedEmail);
+
+      if (savedUserExists) {
         els.userSelect.value = savedEmail;
-      } else if (USERS[0]) {
-        els.userSelect.value = USERS[0].email;
-        localStorage.setItem(USER_KEY, USERS[0].email);
+        els.gateUserSelect.value = savedEmail;
+        closeNameGate();
+      } else {
+        els.userSelect.value = "";
+        els.gateUserSelect.value = "";
+        openNameGate();
       }
+
+      syncGateEmail();
+      syncSelectedEmail();
     }
 
     function wireEvents() {
       els.userSelect.addEventListener("change", () => {
-        localStorage.setItem(USER_KEY, els.userSelect.value);
+        if (!els.userSelect.value) {
+          openNameGate();
+          render();
+          return;
+        }
+        setSelectedUserCookie(els.userSelect.value);
+        els.gateUserSelect.value = els.userSelect.value;
+        syncGateEmail();
+        render();
+      });
+
+      els.gateUserSelect.addEventListener("change", syncGateEmail);
+
+      els.confirmNameBtn.addEventListener("click", () => {
+        if (!els.gateUserSelect.value) {
+          showToast("Select your name first.");
+          return;
+        }
+        setSelectedUserCookie(els.gateUserSelect.value);
+        els.userSelect.value = els.gateUserSelect.value;
+        closeNameGate();
         render();
       });
 
       els.prevWeekBtn.addEventListener("click", () => {
         weekOffset -= 1;
-        saveWeekOffset();
         render();
       });
 
       els.nextWeekBtn.addEventListener("click", () => {
         weekOffset += 1;
-        saveWeekOffset();
+        render();
+      });
+
+      els.jumpThisWeekBtn.addEventListener("click", () => {
+        weekOffset = 0;
         render();
       });
 
@@ -603,6 +744,7 @@
       const costsToken = dateKey !== todayKey;
 
       if (!user) {
+        openNameGate();
         showToast("Select your name first.");
         return;
       }
@@ -727,16 +869,18 @@
       const weekStart = getMonday(addDays(new Date(), weekOffset * 7));
       const weekEnd = addDays(weekStart, 6);
       const tokensRemaining = user ? getTokensRemainingForWeek(weekStart, bookings, user) : 0;
-      const weekLabel = weekOffset === 0 ? "This week" : weekOffset === -1 ? "Last week" : weekOffset === 1 ? "Next week" : `${Math.abs(weekOffset)} weeks ${weekOffset > 0 ? "ahead" : "ago"}`;
+      const weekLabel = getWeekLabel(weekOffset);
       const isOpen = getWeekOpenState(weekOffset);
 
-      els.tokenText.textContent = user ? `${tokensRemaining} / ${user.weeklyTokens} advance tokens left` : "No user selected";
-      els.selectedEmail.textContent = user ? user.email : "";
-      els.activeWeekTitle.textContent = weekLabel;
+      syncSelectedEmail();
+      els.allowanceWeek.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
+      els.tokenText.textContent = user ? `${tokensRemaining} / ${user.weeklyTokens} left` : "No user selected";
       els.weekRange.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
+      els.weekContext.textContent = weekOffset === 0 ? "(This week)" : weekLabel;
+      els.jumpThisWeekBtn.disabled = weekOffset === 0;
       els.ruleBox.innerHTML = `
         <div class="week-status">
-          <span>Week:</span>
+          <span class="week-status-label">${weekLabel}:</span>
           <span class="week-status-badge ${isOpen ? "open" : "closed"}">${isOpen ? "Open" : "Closed"}</span>
         </div>
       `;
@@ -759,7 +903,8 @@
       const dateKey = getDateKey(date);
       const todayKey = getDateKey(new Date());
       const day = document.createElement("article");
-      day.className = `day ${dateKey === todayKey ? "today" : ""}`;
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      day.className = `day ${dateKey === todayKey ? "today" : ""} ${isWeekend ? "weekend" : ""}`;
 
       const head = document.createElement("div");
       head.className = "day-head";
@@ -785,7 +930,7 @@
           removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
           row.appendChild(removeBtn);
           parkEl.appendChild(row);
-        } else if (canBookDate(date)) {
+        } else if (canBookDate(date) && !isWeekend) {
           const btn = document.createElement("button");
           const costsToken = dateKey !== todayKey;
           const alreadyClaimedThisDay = user ? userUsedOnDate(bookings, dateKey, user.email) : false;
@@ -815,6 +960,7 @@
       const available = CARPARKS.filter((park) => !bookings?.[todayKey]?.[park]);
 
       if (!user) {
+        openNameGate();
         showToast("Select your name first.");
         return;
       }
@@ -835,6 +981,37 @@
       els.freeDialog.showModal();
     }
 
+    function openNameGate() {
+      els.app.classList.add("locked");
+      els.nameGate.classList.add("visible");
+    }
+
+    function closeNameGate() {
+      els.app.classList.remove("locked");
+      els.nameGate.classList.remove("visible");
+    }
+
+    function syncGateEmail() {
+      const user = USERS.find((item) => item.email === els.gateUserSelect.value);
+      els.gateSelectedEmail.textContent = user ? user.email : "";
+    }
+
+    function syncSelectedEmail() {
+      const user = getSelectedUser();
+      els.selectedEmail.textContent = user ? user.email : "";
+    }
+
+    function setSelectedUserCookie(email) {
+      setCookie(USER_COOKIE, email, 365);
+    }
+
+    function getWeekLabel(offset) {
+      if (offset === 0) return "This week";
+      if (offset === -1) return "Previous week";
+      if (offset === 1) return "Next week";
+      return `${Math.abs(offset)} weeks ${offset > 0 ? "ahead" : "ago"}`;
+    }
+
     function getWeekOpenState(offset) {
       if (offset < 0) return false;
       if (offset === 0) return true;
@@ -843,6 +1020,7 @@
     }
 
     function canBookDate(date) {
+      if (date.getDay() === 0 || date.getDay() === 6) return false;
       const today = new Date();
       const targetMonday = getMonday(date);
       const currentMonday = getMonday(today);
@@ -923,8 +1101,18 @@
       return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
     }
 
-    function saveWeekOffset() {
-      localStorage.setItem(VIEW_WEEK_KEY, String(weekOffset));
+    function setCookie(name, value, days) {
+      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+      document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+    }
+
+    function getCookie(name) {
+      const cookieName = `${encodeURIComponent(name)}=`;
+      return document.cookie
+        .split(";")
+        .map((item) => item.trim())
+        .find((item) => item.startsWith(cookieName))
+        ?.slice(cookieName.length) || "";
     }
 
     function showToast(message) {
