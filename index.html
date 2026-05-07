@@ -50,14 +50,17 @@
 
     .hero {
       display: grid;
-      grid-template-columns: 1fr auto auto;
       gap: 12px;
-      align-items: start;
       margin-bottom: 14px;
     }
 
+    .title-block {
+      display: grid;
+      gap: 4px;
+    }
+
     h1 {
-      margin: 0 0 4px;
+      margin: 0;
       font-size: clamp(2rem, 4.6vw, 3.2rem);
       line-height: 0.95;
       letter-spacing: -0.06em;
@@ -71,6 +74,13 @@
       max-width: 720px;
     }
 
+    .top-strip {
+      display: grid;
+      grid-template-columns: minmax(230px, 260px) minmax(280px, 1fr) minmax(220px, 240px);
+      gap: 12px;
+      align-items: stretch;
+    }
+
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -78,21 +88,16 @@
       box-shadow: var(--shadow);
     }
 
-    .controls-card {
-      min-width: 280px;
+    .compact-card {
       padding: 12px 14px;
       display: grid;
-      gap: 10px;
+      align-content: start;
+      gap: 8px;
     }
 
     .allowance-card {
-      min-width: 245px;
-      padding: 12px 14px;
       text-align: center;
-      display: grid;
       justify-items: center;
-      align-content: start;
-      gap: 2px;
     }
 
     .small-label {
@@ -110,7 +115,7 @@
       gap: 7px;
       flex-wrap: wrap;
       font-weight: 900;
-      font-size: 1rem;
+      font-size: 1.05rem;
       color: var(--text);
     }
 
@@ -174,7 +179,7 @@
       font-size: 0.85rem;
       line-height: 1.3;
       word-break: break-word;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .allowance-week {
@@ -229,7 +234,7 @@
     .booking-card {
       padding: 14px;
       display: grid;
-      gap: 10px;
+      gap: 12px;
     }
 
     .week-nav {
@@ -272,22 +277,36 @@
     .today-panel {
       display: none;
       justify-self: center;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin: 0 auto 4px;
-      padding: 7px 12px;
-      border-radius: 999px;
+      justify-items: center;
+      gap: 4px;
+      margin: 0 auto 2px;
+      padding: 10px 14px;
+      border-radius: 18px;
       background: rgba(251, 191, 36, 0.14);
       border: 1px solid rgba(251, 191, 36, 0.38);
     }
 
-    .today-panel.visible { display: inline-flex; }
+    .today-panel.visible { display: grid; }
+
+    .today-main {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
     .today-label {
       font-size: 0.98rem;
       font-weight: 900;
       color: var(--text);
+    }
+
+    .today-note {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-align: center;
     }
 
     .days {
@@ -338,18 +357,34 @@
 
     .park {
       border-radius: 12px;
-      padding: 10px 8px;
+      padding: 12px 8px;
       border: 1px solid #dbe2ea;
       display: grid;
       gap: 4px;
       justify-items: center;
       text-align: center;
       background: #fff;
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
     }
 
     .park.available {
       background: rgba(34, 197, 94, 0.11);
       border-color: rgba(34, 197, 94, 0.35);
+    }
+
+    .park.available.bookable {
+      cursor: pointer;
+    }
+
+    .park.available.bookable:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(34, 197, 94, 0.12);
+      background: rgba(34, 197, 94, 0.16);
+    }
+
+    .park.available.disabled {
+      opacity: 0.72;
+      cursor: not-allowed;
     }
 
     .park.taken {
@@ -370,14 +405,22 @@
 
     .park-state {
       color: var(--muted);
-      font-size: 0.84rem;
-      line-height: 1.25;
+      font-size: 0.96rem;
+      line-height: 1.2;
+      font-weight: 800;
     }
 
     .park-state.taken-name {
       color: var(--text);
-      font-size: 0.95rem;
+      font-size: 0.98rem;
       font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .park-note {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 800;
       line-height: 1.2;
     }
 
@@ -385,7 +428,7 @@
       display: flex;
       justify-content: center;
       gap: 6px;
-      margin-top: 4px;
+      margin-top: 2px;
       flex-wrap: wrap;
       width: 100%;
     }
@@ -492,17 +535,8 @@
     }
 
     @media (max-width: 1180px) {
-      .hero {
+      .top-strip {
         grid-template-columns: 1fr;
-      }
-
-      .hero > * {
-        width: 100%;
-      }
-
-      .controls-card,
-      .allowance-card {
-        min-width: 0;
       }
     }
 
@@ -527,36 +561,37 @@
       .week-range,
       .week-context { font-size: 1.08rem; }
       .today-panel { width: 100%; }
-      .today-panel button { width: auto; }
+      .today-main { flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <main id="app" class="app locked">
     <section class="hero">
-      <div>
+      <div class="title-block">
         <h1>Carpark Booking System</h1>
         <p class="subtitle">Select your name, choose an available space, and manage weekly bookings.</p>
       </div>
 
-      <aside class="panel controls-card">
-        <p class="small-label">Booking Controls</p>
-        <div id="statusBox"></div>
+      <div class="top-strip">
+        <aside class="panel compact-card">
+          <p class="small-label">Week Status</p>
+          <div id="statusBox"></div>
+        </aside>
 
-        <div>
+        <aside class="panel compact-card">
           <label for="userSelect">Select your name</label>
           <select id="userSelect"></select>
           <div id="selectedEmail" class="selected-email"></div>
-        </div>
+          <div id="dbModeNote" class="selected-email"></div>
+        </aside>
 
-        <div id="dbModeNote" class="selected-email"></div>
-      </aside>
-
-      <aside class="panel allowance-card">
-        <p class="small-label">Weekly Allowance</p>
-        <p id="allowanceWeek" class="allowance-week">Loading...</p>
-        <p id="tokenText" class="token">Loading...</p>
-      </aside>
+        <aside class="panel compact-card allowance-card">
+          <p class="small-label">Weekly Allowance</p>
+          <p id="allowanceWeek" class="allowance-week">Loading...</p>
+          <p id="tokenText" class="token">Loading...</p>
+        </aside>
+      </div>
     </section>
 
     <section class="panel booking-card">
@@ -575,8 +610,11 @@
       </div>
 
       <div id="todayPanel" class="today-panel">
-        <span class="today-label">Free Carpark Today:</span>
-        <button id="freeTodayBtn" class="gold">Claim</button>
+        <div class="today-main">
+          <span class="today-label">Free Carpark Today:</span>
+          <button id="freeTodayBtn" class="gold">Claim</button>
+        </div>
+        <div class="today-note">same day bookings do not subtract a token</div>
       </div>
 
       <div id="daysGrid" class="days"></div>
@@ -736,7 +774,8 @@
     }
 
     function populateUserSelects() {
-      const options = `<option value="">Select name...</option>` +
+      const options =
+        `<option value="">Select name...</option>` +
         USERS.map(user => `<option value="${escapeHtml(user.email)}">${escapeHtml(user.name)}</option>`).join("");
 
       els.userSelect.innerHTML = options;
@@ -1081,41 +1120,55 @@
       CARPARKS.forEach((park) => {
         const claim = bookings?.[dateKey]?.[park];
         const parkEl = document.createElement("div");
-        parkEl.className = `park ${claim ? "taken" : "available"}`;
-
-        parkEl.innerHTML = `
-          <div class="park-no">Carpark ${park}</div>
-          <div class="park-state ${claim ? "taken-name" : ""}">
-            ${claim ? escapeHtml(claim.person || "Unknown") : "Available"}
-          </div>
-        `;
-
-        const row = document.createElement("div");
-        row.className = "claim-row";
 
         if (claim) {
+          parkEl.className = "park taken";
+          parkEl.innerHTML = `
+            <div class="park-no">Carpark ${park}</div>
+            <div class="park-state taken-name">${escapeHtml(claim.person || "Unknown")}</div>
+          `;
+
+          const row = document.createElement("div");
+          row.className = "claim-row";
+
           const removeBtn = document.createElement("button");
           removeBtn.className = "danger";
           removeBtn.textContent = "Remove";
           removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
+
           row.appendChild(removeBtn);
           parkEl.appendChild(row);
-        } else if (!isWeekend && canBookDate(date)) {
+        } else {
           const costsToken = dateKey !== todayKey;
           const alreadyClaimedThisDay = user ? userUsedOnDate(bookings, dateKey, user.email) : false;
           const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, bookings, user) <= 0 : true;
+          const canClaimThisCell = !isWeekend && canBookDate(date) && !!user && !alreadyClaimedThisDay && !noTokensLeft;
 
-          const btn = document.createElement("button");
-          btn.className = costsToken ? "primary" : "gold";
-          btn.textContent = "Claim";
-          btn.disabled = !user || alreadyClaimedThisDay || noTokensLeft;
+          parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"}`;
+          parkEl.innerHTML = `
+            <div class="park-no">Carpark ${park}</div>
+            <div class="park-state">Available</div>
+            <div class="park-note">${
+              !user ? "Select name"
+              : alreadyClaimedThisDay ? "Day already claimed"
+              : noTokensLeft ? "No tokens left"
+              : isWeekend ? ""
+              : canBookDate(date) ? ""
+              : "Week closed"
+            }</div>
+          `;
 
-          if (alreadyClaimedThisDay) btn.textContent = "Day Claimed";
-          else if (noTokensLeft) btn.textContent = "No Tokens";
-
-          btn.addEventListener("click", () => claimCarpark(dateKey, park));
-          row.appendChild(btn);
-          parkEl.appendChild(row);
+          if (canClaimThisCell) {
+            parkEl.setAttribute("role", "button");
+            parkEl.setAttribute("tabindex", "0");
+            parkEl.addEventListener("click", () => claimCarpark(dateKey, park));
+            parkEl.addEventListener("keydown", (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                claimCarpark(dateKey, park);
+              }
+            });
+          }
         }
 
         day.appendChild(parkEl);
