@@ -353,8 +353,8 @@
   <main class="app">
     <section class="hero">
       <div>
-        <h1>Carpark Claims</h1>
-        <p class="subtitle">Claim carparks 44, 45 or 126. Same-day unclaimed spaces are free and do not use a weekly token. Future-day claims use the selected person’s weekly token allowance.</p>
+        <h1>GC OFfice Carparks</h1>
+        <p class="subtitle"></p>
       </div>
       <aside class="status-card">
         <div class="small-label">Weekly allowance</div>
@@ -648,13 +648,13 @@
       const weekLabel = weekOffset === 0 ? "This week" : weekOffset === -1 ? "Last week" : weekOffset === 1 ? "Next week" : `${Math.abs(weekOffset)} weeks ${weekOffset > 0 ? "ahead" : "ago"}`;
       const isOpen = getWeekOpenState(weekOffset);
 
-      els.tokenText.textContent = user ? `${tokensRemaining} / ${user.weeklyTokens} advance tokens left` : "No user selected";
+      els.tokenText.textContent = user ? `${tokensRemaining} / ${user.weeklyTokens} advance tokens left. Picking a carpark on the day does not subtract a token.` : "No user selected";
       els.selectedEmail.textContent = user ? user.email : "";
       els.activeWeekTitle.textContent = weekLabel;
       els.weekRange.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
       els.ruleBox.innerHTML = `
         <div class="week-status">
-          <span>Week:</span>
+          <span>Week Status:</span>
           <span class="week-status-badge ${isOpen ? "open" : "closed"}">${isOpen ? "Open" : "Closed"}</span>
         </div>
       `;
