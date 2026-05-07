@@ -183,9 +183,12 @@
     }
 
     .name-label {
-      color: var(--text);
+      color: var(--muted);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      margin: 0;
       font-weight: 900;
-      font-size: 1.05rem;
       line-height: 1.2;
     }
 
@@ -236,6 +239,7 @@
     }
 
     button:hover { transform: translateY(-1px); }
+
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -243,15 +247,27 @@
     }
 
     .primary { background: var(--blue); }
+
     .gold {
       background: linear-gradient(135deg, #fde68a, var(--gold));
       box-shadow: 0 8px 18px rgba(251, 191, 36, 0.18);
     }
-    .danger { background: var(--red); color: #fff; }
+
+    .danger {
+      background: var(--red);
+      color: #fff;
+    }
+
     .ghost {
       background: #f8fafc;
       border: 1px solid var(--line);
       color: var(--text);
+    }
+
+    .jump-btn:not(:disabled) {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #075985;
     }
 
     .booking-card {
@@ -375,7 +391,8 @@
 
     .date {
       color: var(--text);
-      font-size: 0.84rem;
+      font-size: 0.96rem;
+      font-weight: 800;
     }
 
     .park {
@@ -667,7 +684,7 @@
             <div id="weekRange" class="week-range"></div>
             <div id="weekContext" class="week-context"></div>
           </div>
-          <button id="jumpThisWeekBtn" class="ghost">Jump to This Week</button>
+          <button id="jumpThisWeekBtn" class="ghost jump-btn">Jump to This Week</button>
         </div>
 
         <button id="nextWeekBtn" class="ghost">Next Week →</button>
@@ -678,7 +695,7 @@
           <span class="today-label">Free Carpark Today:</span>
           <button id="freeTodayBtn" class="gold">Claim</button>
         </div>
-        <div class="today-note">same day bookings do not subtract a token</div>
+        <div class="today-note">Same day bookings do not subtract a token</div>
       </div>
 
       <div id="daysGrid" class="days"></div>
@@ -1258,7 +1275,7 @@
       const days = Math.floor(totalSeconds / 86400);
       const hours = Math.floor((totalSeconds % 86400) / 3600);
       const seconds = totalSeconds % 60;
-      return `${days}:${String(hours).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      return `${days}d ${hours}h ${seconds}s`;
     }
 
     function getWeekOpenDate(targetWeekStart) {
