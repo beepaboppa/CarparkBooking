@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carpark Booking</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(255, 255, 255, 0.08);
+      --panel-strong: rgba(255, 255, 255, 0.14);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --line: rgba(255, 255, 255, 0.14);
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --gold: #fbbf24;
+      --red: #fb7185;
+      --shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.24), transparent 30%),
+        radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.20), transparent 28%),
+        linear-gradient(135deg, #020617, var(--bg));
+      padding: 28px;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 5vw, 4rem);
+      letter-spacing: -0.06em;
+      line-height: 0.95;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 760px;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .status-card,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .status-card {
+      padding: 18px;
+      min-width: 275px;
+    }
+
+    .small-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 7px;
+    }
+
+    .token {
+      font-weight: 900;
+      font-size: 1.12rem;
+      line-height: 1.25;
+    }
+
+    .email-line {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      word-break: break-all;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      padding: 20px;
+    }
+
+    .week-nav {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 16px;
+      cursor: pointer;
+      color: #020617;
+      background: #e2e8f0;
+      font-weight: 800;
+      transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .primary { background: var(--blue); }
+    .gold { background: linear-gradient(135deg, #fde68a, var(--gold)); box-shadow: 0 10px 30px rgba(251, 191, 36, 0.25); }
+    .danger { background: var(--red); color: #fff; }
+    .ghost { background: rgba(255,255,255,0.12); color: var(--text); border: 1px solid var(--line); }
+
+    .week-title {
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      font-size: 1.25rem;
+    }
+
+    .rule-box {
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--line);
+      padding: 14px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-top: 14px;
+    }
+
+    .token-actions {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.10);
+      color: var(--text);
+      padding: 12px 13px;
+      outline: none;
+    }
+
+    select option { color: #020617; }
+
+    .today-panel {
+      display: none;
+      margin-bottom: 16px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(251, 191, 36, 0.14);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+    }
+
+    .today-panel.visible { display: grid; gap: 12px; }
+
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(118px, 1fr));
+      gap: 12px;
+    }
+
+    .day {
+      min-height: 210px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .day.today {
+      border-color: rgba(251, 191, 36, 0.7);
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.18) inset;
+    }
+
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .day-name { font-weight: 900; }
+    .date { color: var(--muted); font-size: 0.85rem; }
+
+    .park {
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      display: grid;
+      gap: 4px;
+    }
+
+    .park.available { border-color: rgba(34, 197, 94, 0.45); }
+    .park.taken { border-color: rgba(251, 113, 133, 0.45); opacity: 0.78; }
+
+    .park-no { font-weight: 900; }
+    .park-state { color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+
+    .claim-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .claim-row button { padding: 8px 10px; font-size: 0.82rem; }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      max-width: 360px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: #f8fafc;
+      color: #020617;
+      box-shadow: var(--shadow);
+      font-weight: 800;
+      transform: translateY(18px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 180ms ease;
+      z-index: 10;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 0;
+      background: #0f172a;
+      color: var(--text);
+      width: min(420px, calc(100vw - 28px));
+      box-shadow: var(--shadow);
+    }
+
+    dialog::backdrop { background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(4px); }
+
+    .modal-content { padding: 20px; display: grid; gap: 14px; }
+    .modal-title { font-size: 1.35rem; font-weight: 900; letter-spacing: -0.04em; }
+
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+
+    .db-note {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 980px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .status-card { min-width: 0; }
+    }
+
+    @media (max-width: 620px) {
+      body { padding: 16px; }
+      .days { grid-template-columns: 1fr; }
+      .week-nav { align-items: stretch; }
+      .week-nav button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div>
+        <h1>Carpark Claims</h1>
+        <p class="subtitle">Claim carparks 44, 45 or 126. Same-day unclaimed spaces are free and do not use a weekly token. Future-day claims use the selected person’s weekly token allowance.</p>
+      </div>
+      <aside class="status-card">
+        <div class="small-label">Weekly allowance</div>
+        <div id="tokenText" class="token">Loading...</div>
+        <div id="userEmail" class="email-line"></div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <aside class="card">
+        <div class="small-label">Booking controls</div>
+        <div class="week-title" id="activeWeekTitle">This week</div>
+        <div class="rule-box" id="ruleBox">Loading booking rules...</div>
+
+        <div class="token-actions">
+          <div class="field">
+            <label for="userSelect">Select your name</label>
+            <select id="userSelect"></select>
+          </div>
+        </div>
+
+        <p class="db-note" id="dbModeNote"></p>
+      </aside>
+
+      <section class="card">
+        <div class="week-nav">
+          <button id="prevWeekBtn" class="ghost">← Last Week</button>
+          <div class="week-title" id="weekRange"></div>
+          <button id="nextWeekBtn" class="ghost">Next Week →</button>
+        </div>
+
+        <div id="todayPanel" class="today-panel">
+          <div>
+            <div class="small-label">Same-day option</div>
+            <div class="week-title">Free Carpark Today</div>
+          </div>
+          <button id="freeTodayBtn" class="gold">Free Carpark Today</button>
+        </div>
+
+        <div class="days" id="daysGrid"></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="freeDialog">
+    <form method="dialog" class="modal-content" id="freeForm">
+      <div>
+        <div class="small-label">Choose available carpark</div>
+        <div class="modal-title">Free Carpark Today</div>
+      </div>
+      <div class="field">
+        <label for="freeParkSelect">Available today</label>
+        <select id="freeParkSelect"></select>
+      </div>
+      <div class="modal-actions">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button id="confirmFreeBtn" value="default" class="gold">Claim Today</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    // ============================================================
+    // Optional Firebase setup
+    // Replace the values below with your Firebase project config.
+    // If left blank, the site works as a local demo using localStorage.
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "",
+      authDomain: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: ""
+    };
+
+    // ============================================================
+    // User list
+    // Add or edit names/emails here. Tokens are not random strings.
+    // A person's email is their identity, and their weekly token count
+    // is calculated from this list minus token-using claims already made.
+    // ============================================================
+    const USERS = [
+      { name: "James", email: "james@example.com", weeklyTokens: 1 },
+      { name: "Sarah", email: "sarah@example.com", weeklyTokens: 1 },
+      { name: "Alex", email: "alex@example.com", weeklyTokens: 1 }
+    ];
+
+    const CARPARKS = ["44", "45", "126"];
+    const USER_KEY = "carpark_selected_user_email_v2";
+    const BOOKINGS_KEY = "carpark_bookings_demo_v2";
+    const VIEW_WEEK_KEY = "carpark_view_week_offset_v1";
+
+    const els = {
+      tokenText: document.querySelector("#tokenText"),
+      userEmail: document.querySelector("#userEmail"),
+      userSelect: document.querySelector("#userSelect"),
+      prevWeekBtn: document.querySelector("#prevWeekBtn"),
+      nextWeekBtn: document.querySelector("#nextWeekBtn"),
+      activeWeekTitle: document.querySelector("#activeWeekTitle"),
+      weekRange: document.querySelector("#weekRange"),
+      ruleBox: document.querySelector("#ruleBox"),
+      daysGrid: document.querySelector("#daysGrid"),
+      todayPanel: document.querySelector("#todayPanel"),
+      freeTodayBtn: document.querySelector("#freeTodayBtn"),
+      freeDialog: document.querySelector("#freeDialog"),
+      freeParkSelect: document.querySelector("#freeParkSelect"),
+      confirmFreeBtn: document.querySelector("#confirmFreeBtn"),
+      dbModeNote: document.querySelector("#dbModeNote"),
+      toast: document.querySelector("#toast")
+    };
+
+    let bookings = {};
+    let weekOffset = Number(localStorage.getItem(VIEW_WEEK_KEY) || 0);
+    let db = null;
+    let unsubscribe = null;
+    let usingFirebase = false;
+
+    init();
+
+    async function init() {
+      populateUserSelect();
+      await setupStorage();
+      wireEvents();
+      await loadBookings();
+      render();
+    }
+
+    async function setupStorage() {
+      const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
+
+      if (!hasFirebaseConfig) {
+        els.dbModeNote.textContent = "Demo mode: bookings are stored only in this browser. Add Firebase config in the HTML to make claims shared between everyone online. The name dropdown is convenience only, not secure authentication.";
+        return;
+      }
+
+      try {
+        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+        const { getFirestore, doc, onSnapshot, setDoc, runTransaction } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+        const app = initializeApp(firebaseConfig);
+        db = { firestore: getFirestore(app), doc, onSnapshot, setDoc, runTransaction };
+        usingFirebase = true;
+        els.dbModeNote.textContent = "Shared mode: bookings are synced online using Firebase. For real identity control, connect this to Google/Microsoft sign-in instead of trusting the dropdown alone.";
+      } catch (err) {
+        console.error(err);
+        els.dbModeNote.textContent = "Firebase could not load, so this is running in local demo mode.";
+      }
+    }
+
+    function populateUserSelect() {
+      const savedEmail = localStorage.getItem(USER_KEY);
+      els.userSelect.innerHTML = USERS.map((user) => `<option value="${escapeHtml(user.email)}">${escapeHtml(user.name)}</option>`).join("");
+
+      if (savedEmail && USERS.some((user) => user.email === savedEmail)) {
+        els.userSelect.value = savedEmail;
+      } else if (USERS[0]) {
+        els.userSelect.value = USERS[0].email;
+        localStorage.setItem(USER_KEY, USERS[0].email);
+      }
+    }
+
+    function wireEvents() {
+      els.userSelect.addEventListener("change", () => {
+        localStorage.setItem(USER_KEY, els.userSelect.value);
+        render();
+      });
+
+      els.prevWeekBtn.addEventListener("click", () => {
+        weekOffset -= 1;
+        saveWeekOffset();
+        render();
+      });
+
+      els.nextWeekBtn.addEventListener("click", () => {
+        weekOffset += 1;
+        saveWeekOffset();
+        render();
+      });
+
+      els.freeTodayBtn.addEventListener("click", openFreeTodayDialog);
+
+      els.confirmFreeBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const carpark = els.freeParkSelect.value;
+        if (!carpark) return;
+        await claimCarpark(getDateKey(new Date()), carpark);
+        els.freeDialog.close();
+      });
+    }
+
+    async function loadBookings() {
+      if (!usingFirebase) {
+        bookings = JSON.parse(localStorage.getItem(BOOKINGS_KEY) || "{}");
+        return;
+      }
+
+      const docRef = db.doc(db.firestore, "carparkBookings", "allBookings");
+      unsubscribe?.();
+      unsubscribe = db.onSnapshot(docRef, (snap) => {
+        bookings = snap.exists() ? snap.data().bookings || {} : {};
+        render();
+      });
+    }
+
+    async function saveBookings() {
+      if (!usingFirebase) {
+        localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
+        return;
+      }
+
+      const docRef = db.doc(db.firestore, "carparkBookings", "allBookings");
+      await db.setDoc(docRef, { bookings }, { merge: true });
+    }
+
+    async function claimCarpark(dateKey, carpark) {
+      const user = getSelectedUser();
+      const now = new Date();
+      const todayKey = getDateKey(now);
+      const requestedDate = parseDateKey(dateKey);
+      const costsToken = dateKey !== todayKey;
+
+      if (!user) {
+        showToast("Select your name first.");
+        return;
+      }
+
+      if (!canBookDate(requestedDate)) {
+        showToast("That day is not open for booking yet.");
+        return;
+      }
+
+      if (usingFirebase) {
+        const docRef = db.doc(db.firestore, "carparkBookings", "allBookings");
+        try {
+          await db.runTransaction(db.firestore, async (transaction) => {
+            const snap = await transaction.get(docRef);
+            const current = snap.exists() ? snap.data().bookings || {} : {};
+            const existing = current?.[dateKey]?.[carpark];
+
+            if (existing) throw new Error(`Carpark ${carpark} is already taken.`);
+            if (userUsedOnDate(current, dateKey, user.email)) throw new Error("You have already claimed a carpark on this day.");
+            if (costsToken && getTokensRemainingForWeek(requestedDate, current, user) <= 0) throw new Error("You have no weekly tokens left for that week.");
+
+            current[dateKey] ??= {};
+            current[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
+
+            transaction.set(docRef, { bookings: current }, { merge: true });
+          });
+          showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
+        } catch (err) {
+          showToast(err.message || "Could not claim carpark.");
+        }
+        return;
+      }
+
+      bookings[dateKey] ??= {};
+      if (bookings[dateKey][carpark]) {
+        showToast(`Carpark ${carpark} is already taken.`);
+        return;
+      }
+
+      if (userUsedOnDate(bookings, dateKey, user.email)) {
+        showToast("You have already claimed a carpark on this day.");
+        return;
+      }
+
+      if (costsToken && getTokensRemainingForWeek(requestedDate, bookings, user) <= 0) {
+        showToast("You have no weekly tokens left for that week.");
+        return;
+      }
+
+      bookings[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
+      await saveBookings();
+      showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
+      render();
+    }
+
+    function buildClaimRecord(carpark, user, date, costsToken) {
+      return {
+        carpark,
+        person: user.name,
+        email: user.email,
+        claimedAt: new Date().toISOString(),
+        mode: costsToken ? "weekly-token" : "free-today",
+        tokenCost: costsToken ? 1 : 0,
+        weekKey: getDateKey(getMonday(date))
+      };
+    }
+
+    function claimSuccessMessage(carpark, date, costsToken) {
+      const suffix = costsToken ? "1 weekly token used" : "no weekly token used";
+      return `Carpark ${carpark} claimed for ${formatShortDate(date)} — ${suffix}.`;
+    }
+
+    function render() {
+      const user = getSelectedUser();
+      const weekStart = getMonday(addDays(new Date(), weekOffset * 7));
+      const weekEnd = addDays(weekStart, 6);
+      const tokensRemaining = user ? getTokensRemainingForWeek(weekStart, bookings, user) : 0;
+      const weekLabel = weekOffset === 0 ? "This week" : weekOffset === -1 ? "Last week" : weekOffset === 1 ? "Next week" : `${Math.abs(weekOffset)} weeks ${weekOffset > 0 ? "ahead" : "ago"}`;
+
+      els.tokenText.textContent = user ? `${tokensRemaining} / ${user.weeklyTokens} advance tokens left` : "No user selected";
+      els.userEmail.textContent = user ? user.email : "";
+      els.activeWeekTitle.textContent = weekLabel;
+      els.weekRange.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
+      els.ruleBox.textContent = getRuleText(weekOffset);
+
+      const todayKey = getDateKey(new Date());
+      const todayIsVisible = getDateKey(weekStart) <= todayKey && todayKey <= getDateKey(weekEnd);
+      const availableToday = CARPARKS.filter((park) => !bookings?.[todayKey]?.[park]);
+      const userHasTodayClaim = user ? userUsedOnDate(bookings, todayKey, user.email) : false;
+      els.todayPanel.classList.toggle("visible", todayIsVisible && availableToday.length > 0 && !userHasTodayClaim && weekOffset === 0);
+
+      els.daysGrid.innerHTML = "";
+      for (let index = 0; index < 7; index++) {
+        const date = addDays(weekStart, index);
+        els.daysGrid.appendChild(renderDay(date));
+      }
+    }
+
+    function renderDay(date) {
+      const user = getSelectedUser();
+      const dateKey = getDateKey(date);
+      const todayKey = getDateKey(new Date());
+      const day = document.createElement("article");
+      day.className = `day ${dateKey === todayKey ? "today" : ""}`;
+
+      const head = document.createElement("div");
+      head.className = "day-head";
+      head.innerHTML = `<div><div class="day-name">${date.toLocaleDateString(undefined, { weekday: "short" })}</div><div class="date">${formatShortDate(date)}</div></div>`;
+      day.appendChild(head);
+
+      CARPARKS.forEach((park) => {
+        const claim = bookings?.[dateKey]?.[park];
+        const parkEl = document.createElement("div");
+        parkEl.className = `park ${claim ? "taken" : "available"}`;
+        parkEl.innerHTML = `
+          <div class="park-no">Carpark ${park}</div>
+          <div class="park-state">${claim ? `Taken by ${escapeHtml(claim.person || "Anonymous")}<br>${escapeHtml(claim.email || "")}` : "Available"}</div>
+        `;
+
+        if (!claim && canBookDate(date)) {
+          const row = document.createElement("div");
+          row.className = "claim-row";
+          const btn = document.createElement("button");
+          const costsToken = dateKey !== todayKey;
+          const alreadyClaimedThisDay = user ? userUsedOnDate(bookings, dateKey, user.email) : false;
+          const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, bookings, user) <= 0 : true;
+
+          btn.className = costsToken ? "primary" : "gold";
+          btn.textContent = costsToken ? "Claim" : "Claim Free";
+          btn.disabled = !user || alreadyClaimedThisDay || noTokensLeft;
+
+          if (alreadyClaimedThisDay) btn.textContent = "Day Claimed";
+          if (noTokensLeft) btn.textContent = "No Tokens";
+
+          btn.addEventListener("click", () => claimCarpark(dateKey, park));
+          row.appendChild(btn);
+          parkEl.appendChild(row);
+        }
+
+        day.appendChild(parkEl);
+      });
+
+      return day;
+    }
+
+    function openFreeTodayDialog() {
+      const user = getSelectedUser();
+      const todayKey = getDateKey(new Date());
+      const available = CARPARKS.filter((park) => !bookings?.[todayKey]?.[park]);
+
+      if (!user) {
+        showToast("Select your name first.");
+        return;
+      }
+
+      if (userUsedOnDate(bookings, todayKey, user.email)) {
+        showToast("You have already claimed a carpark today.");
+        return;
+      }
+
+      els.freeParkSelect.innerHTML = available.map((park) => `<option value="${park}">Carpark ${park}</option>`).join("");
+      els.confirmFreeBtn.disabled = available.length === 0;
+
+      if (available.length === 0) {
+        showToast("No free carparks are available today.");
+        return;
+      }
+
+      els.freeDialog.showModal();
+    }
+
+    function getRuleText(offset) {
+      if (offset < 0) return "Last week is view-only. Past bookings cannot be changed here.";
+      if (offset === 0) return "This week is open. Today can be claimed for free without using a weekly token. Other days use one advance token.";
+      if (offset === 1) {
+        return canBookNextWeek()
+          ? "Next week is open because it is at least Thursday 2:30pm this week. Next-week claims use next week’s token allowance."
+          : "Next week is locked until Thursday at 2:30pm this week.";
+      }
+      return "Only this week and next week are available for booking. Further weeks are view-only.";
+    }
+
+    function canBookDate(date) {
+      const today = new Date();
+      const targetMonday = getMonday(date);
+      const currentMonday = getMonday(today);
+      const offsetWeeks = Math.round((targetMonday - currentMonday) / (7 * 24 * 60 * 60 * 1000));
+
+      if (offsetWeeks < 0) return false;
+      if (offsetWeeks === 0) return true;
+      if (offsetWeeks === 1) return canBookNextWeek();
+      return false;
+    }
+
+    function canBookNextWeek() {
+      const now = new Date();
+      const thursday = addDays(getMonday(now), 3);
+      thursday.setHours(14, 30, 0, 0);
+      return now >= thursday;
+    }
+
+    function getSelectedUser() {
+      return USERS.find((user) => user.email === els.userSelect.value) || null;
+    }
+
+    function getTokensRemainingForWeek(date, source, user) {
+      return Math.max(0, user.weeklyTokens - getTokenClaimsForWeek(date, source, user.email));
+    }
+
+    function getTokenClaimsForWeek(date, source, email) {
+      const start = getMonday(date);
+      const end = addDays(start, 6);
+      const startKey = getDateKey(start);
+      const endKey = getDateKey(end);
+      let used = 0;
+
+      Object.entries(source || {}).forEach(([dateKey, dayClaims]) => {
+        if (dateKey < startKey || dateKey > endKey) return;
+        Object.values(dayClaims || {}).forEach((claim) => {
+          const isSameUser = claim.email === email;
+          const usesToken = Number(claim.tokenCost || 0) > 0 || claim.mode === "weekly-token";
+          if (isSameUser && usesToken) used += 1;
+        });
+      });
+
+      return used;
+    }
+
+    function userUsedOnDate(source, dateKey, email) {
+      return Object.values(source?.[dateKey] || {}).some((claim) => claim.email === email);
+    }
+
+    function getMonday(date) {
+      const copy = new Date(date);
+      copy.setHours(0, 0, 0, 0);
+      const day = copy.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      copy.setDate(copy.getDate() + diff);
+      return copy;
+    }
+
+    function addDays(date, days) {
+      const copy = new Date(date);
+      copy.setDate(copy.getDate() + days);
+      return copy;
+    }
+
+    function getDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function parseDateKey(key) {
+      const [year, month, day] = key.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function formatShortDate(date) {
+      return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    }
+
+    function saveWeekOffset() {
+      localStorage.setItem(VIEW_WEEK_KEY, String(weekOffset));
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 2800);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>
