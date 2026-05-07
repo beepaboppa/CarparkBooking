@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Carpark Booking</title>
   <style>
-  :root {
-    --bg: #f6f8fc;
-    --panel: #ffffff;
-    --panel-strong: #f1f5f9;
-    --text: #0f172a;
-    --muted: #475569;
-    --line: #dbe2ea;
-    --blue: #38bdf8;
-    --green: #22c55e;
-    --gold: #fbbf24;
-    --red: #ef4444;
-    --shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
-    --radius: 22px;
-  }
+    :root {
+      --bg: #f6f8fc;
+      --panel: #ffffff;
+      --panel-strong: #f1f5f9;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: #dbe2ea;
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --gold: #fbbf24;
+      --red: #ef4444;
+      --shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+      --radius: 22px;
+    }
 
     * { box-sizing: border-box; }
 
@@ -28,14 +28,14 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.24), transparent 30%),
-        radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.20), transparent 28%),
-        linear-gradient(135deg, #020617, var(--bg));
+        radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.10), transparent 30%),
+        radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.10), transparent 28%),
+        linear-gradient(135deg, #f8fafc, var(--bg));
       padding: 28px;
     }
 
     .app {
-      width: min(1120px, 100%);
+      width: min(1180px, 100%);
       margin: 0 auto;
     }
 
@@ -68,7 +68,7 @@
       border: 1px solid var(--line);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
+      backdrop-filter: none;
     }
 
     .status-card {
@@ -88,13 +88,6 @@
       font-weight: 900;
       font-size: 1.12rem;
       line-height: 1.25;
-    }
-
-    .email-line {
-      margin-top: 7px;
-      color: var(--muted);
-      font-size: 0.88rem;
-      word-break: break-all;
     }
 
     .grid {
@@ -137,9 +130,16 @@
     button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
     .primary { background: var(--blue); }
-    .gold { background: linear-gradient(135deg, #fde68a, var(--gold)); box-shadow: 0 10px 30px rgba(251, 191, 36, 0.25); }
+    .gold {
+      background: linear-gradient(135deg, #fde68a, var(--gold));
+      box-shadow: 0 10px 30px rgba(251, 191, 36, 0.20);
+    }
     .danger { background: var(--red); color: #fff; }
-    .ghost { background: rgba(255,255,255,0.12); color: var(--text); border: 1px solid var(--line); }
+    .ghost {
+      background: #f8fafc;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
 
     .week-title {
       font-weight: 900;
@@ -149,12 +149,41 @@
 
     .rule-box {
       border-radius: 18px;
-      background: rgba(255, 255, 255, 0.07);
+      background: #f8fafc;
       border: 1px solid var(--line);
       padding: 14px;
       color: var(--muted);
       line-height: 1.55;
       margin-top: 14px;
+    }
+
+    .week-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .week-status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 0.9rem;
+    }
+
+    .week-status-badge.open {
+      background: rgba(34, 197, 94, 0.14);
+      color: #15803d;
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+
+    .week-status-badge.closed {
+      background: rgba(239, 68, 68, 0.12);
+      color: #b91c1c;
+      border: 1px solid rgba(239, 68, 68, 0.35);
     }
 
     .token-actions {
@@ -170,7 +199,7 @@
 
     label {
       color: var(--muted);
-      font-weight: 700;
+      font-weight: 800;
       font-size: 0.92rem;
     }
 
@@ -179,7 +208,7 @@
       width: 100%;
       border-radius: 14px;
       border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.10);
+      background: #ffffff;
       color: var(--text);
       padding: 12px 13px;
       outline: none;
@@ -187,12 +216,20 @@
 
     select option { color: #020617; }
 
+    .selected-email {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      word-break: break-word;
+      line-height: 1.35;
+    }
+
     .today-panel {
       display: none;
       margin-bottom: 16px;
       padding: 16px;
       border-radius: 20px;
-      background: rgba(251, 191, 36, 0.14);
+      background: rgba(251, 191, 36, 0.16);
       border: 1px solid rgba(251, 191, 36, 0.45);
     }
 
@@ -206,7 +243,7 @@
 
     .day {
       min-height: 210px;
-      background: rgba(255, 255, 255, 0.07);
+      background: #f8fafc;
       border: 1px solid var(--line);
       border-radius: 18px;
       padding: 12px;
@@ -216,7 +253,7 @@
     }
 
     .day.today {
-      border-color: rgba(251, 191, 36, 0.7);
+      border-color: rgba(251, 191, 36, 0.85);
       box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.18) inset;
     }
 
@@ -233,14 +270,14 @@
     .park {
       border-radius: 14px;
       padding: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
       display: grid;
       gap: 4px;
     }
 
     .park.available { border-color: rgba(34, 197, 94, 0.45); }
-    .park.taken { border-color: rgba(251, 113, 133, 0.45); opacity: 0.78; }
+    .park.taken { border-color: rgba(239, 68, 68, 0.42); opacity: 0.84; }
 
     .park-no { font-weight: 900; }
     .park-state { color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
@@ -261,8 +298,8 @@
       max-width: 360px;
       padding: 14px 16px;
       border-radius: 16px;
-      background: #f8fafc;
-      color: #020617;
+      background: #0f172a;
+      color: #ffffff;
       box-shadow: var(--shadow);
       font-weight: 800;
       transform: translateY(18px);
@@ -278,13 +315,13 @@
       border: 1px solid var(--line);
       border-radius: 24px;
       padding: 0;
-      background: #0f172a;
+      background: #ffffff;
       color: var(--text);
       width: min(420px, calc(100vw - 28px));
       box-shadow: var(--shadow);
     }
 
-    dialog::backdrop { background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(4px); }
+    dialog::backdrop { background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(4px); }
 
     .modal-content { padding: 20px; display: grid; gap: 14px; }
     .modal-title { font-size: 1.35rem; font-weight: 900; letter-spacing: -0.04em; }
@@ -322,7 +359,6 @@
       <aside class="status-card">
         <div class="small-label">Weekly allowance</div>
         <div id="tokenText" class="token">Loading...</div>
-        <div id="userEmail" class="email-line"></div>
       </aside>
     </section>
 
@@ -330,12 +366,13 @@
       <aside class="card">
         <div class="small-label">Booking controls</div>
         <div class="week-title" id="activeWeekTitle">This week</div>
-        <div class="rule-box" id="ruleBox">Loading booking rules...</div>
+        <div class="rule-box" id="ruleBox">Loading...</div>
 
         <div class="token-actions">
           <div class="field">
             <label for="userSelect">Select your name</label>
             <select id="userSelect"></select>
+            <div id="selectedEmail" class="selected-email"></div>
           </div>
         </div>
 
@@ -374,7 +411,7 @@
       </div>
       <div class="modal-actions">
         <button value="cancel" class="ghost">Cancel</button>
-        <button id="confirmFreeBtn" value="default" class="gold">Claim Today</button>
+        <button id="confirmFreeBtn" value="default" class="gold">Claim</button>
       </div>
     </form>
   </dialog>
@@ -382,26 +419,15 @@
   <div id="toast" class="toast"></div>
 
   <script type="module">
-    // ============================================================
-    // Optional Firebase setup
-    // Replace the values below with your Firebase project config.
-    // If left blank, the site works as a local demo using localStorage.
-    // ============================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDzFhhlF2UmbKnyIe4Vr9kj93BKnJK7qtI",
-  authDomain: "carpark-booking-583cc.firebaseapp.com",
-  projectId: "carpark-booking-583cc",
-  storageBucket: "carpark-booking-583cc.firebasestorage.app",
-  messagingSenderId: "253260648727",
-  appId: "1:253260648727:web:6be9941a57240e37996752"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzFhhlF2UmbKnyIe4Vr9kj93BKnJK7qtI",
+      authDomain: "carpark-booking-583cc.firebaseapp.com",
+      projectId: "carpark-booking-583cc",
+      storageBucket: "carpark-booking-583cc.firebasestorage.app",
+      messagingSenderId: "253260648727",
+      appId: "1:253260648727:web:6be9941a57240e37996752"
+    };
 
-    // ============================================================
-    // User list
-    // Add or edit names/emails here. Tokens are not random strings.
-    // A person's email is their identity, and their weekly token count
-    // is calculated from this list minus token-using claims already made.
-    // ============================================================
     const USERS = [
       { name: "James", email: "james@example.com", weeklyTokens: 1 },
       { name: "Sarah", email: "sarah@example.com", weeklyTokens: 1 },
@@ -415,7 +441,7 @@ const firebaseConfig = {
 
     const els = {
       tokenText: document.querySelector("#tokenText"),
-      userEmail: document.querySelector("#userEmail"),
+      selectedEmail: document.querySelector("#selectedEmail"),
       userSelect: document.querySelector("#userSelect"),
       prevWeekBtn: document.querySelector("#prevWeekBtn"),
       nextWeekBtn: document.querySelector("#nextWeekBtn"),
@@ -452,7 +478,7 @@ const firebaseConfig = {
       const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
 
       if (!hasFirebaseConfig) {
-        els.dbModeNote.textContent = "Demo mode: bookings are stored only in this browser. Add Firebase config in the HTML to make claims shared between everyone online. The name dropdown is convenience only, not secure authentication.";
+        els.dbModeNote.textContent = "Demo mode: bookings are stored only in this browser.";
         return;
       }
 
@@ -462,7 +488,7 @@ const firebaseConfig = {
         const app = initializeApp(firebaseConfig);
         db = { firestore: getFirestore(app), doc, onSnapshot, setDoc, runTransaction };
         usingFirebase = true;
-        els.dbModeNote.textContent = "Shared mode: bookings are synced online using Firebase. For real identity control, connect this to Google/Microsoft sign-in instead of trusting the dropdown alone.";
+        els.dbModeNote.textContent = "Shared mode: bookings are synced online using Firebase.";
       } catch (err) {
         console.error(err);
         els.dbModeNote.textContent = "Firebase could not load, so this is running in local demo mode.";
@@ -547,7 +573,7 @@ const firebaseConfig = {
       }
 
       if (!canBookDate(requestedDate)) {
-        showToast("That day is not open for booking yet.");
+        showToast("That week is closed.");
         return;
       }
 
@@ -620,12 +646,18 @@ const firebaseConfig = {
       const weekEnd = addDays(weekStart, 6);
       const tokensRemaining = user ? getTokensRemainingForWeek(weekStart, bookings, user) : 0;
       const weekLabel = weekOffset === 0 ? "This week" : weekOffset === -1 ? "Last week" : weekOffset === 1 ? "Next week" : `${Math.abs(weekOffset)} weeks ${weekOffset > 0 ? "ahead" : "ago"}`;
+      const isOpen = getWeekOpenState(weekOffset);
 
       els.tokenText.textContent = user ? `${tokensRemaining} / ${user.weeklyTokens} advance tokens left` : "No user selected";
-      els.userEmail.textContent = user ? user.email : "";
+      els.selectedEmail.textContent = user ? user.email : "";
       els.activeWeekTitle.textContent = weekLabel;
       els.weekRange.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
-      els.ruleBox.textContent = getRuleText(weekOffset);
+      els.ruleBox.innerHTML = `
+        <div class="week-status">
+          <span>Week:</span>
+          <span class="week-status-badge ${isOpen ? "open" : "closed"}">${isOpen ? "Open" : "Closed"}</span>
+        </div>
+      `;
 
       const todayKey = getDateKey(new Date());
       const todayIsVisible = getDateKey(weekStart) <= todayKey && todayKey <= getDateKey(weekEnd);
@@ -658,7 +690,7 @@ const firebaseConfig = {
         parkEl.className = `park ${claim ? "taken" : "available"}`;
         parkEl.innerHTML = `
           <div class="park-no">Carpark ${park}</div>
-          <div class="park-state">${claim ? `Taken by ${escapeHtml(claim.person || "Anonymous")}<br>${escapeHtml(claim.email || "")}` : "Available"}</div>
+          <div class="park-state">${claim ? `Taken by ${escapeHtml(claim.person || "Anonymous")}` : "Available"}</div>
         `;
 
         if (!claim && canBookDate(date)) {
@@ -670,7 +702,7 @@ const firebaseConfig = {
           const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, bookings, user) <= 0 : true;
 
           btn.className = costsToken ? "primary" : "gold";
-          btn.textContent = costsToken ? "Claim" : "Claim Free";
+          btn.textContent = "Claim";
           btn.disabled = !user || alreadyClaimedThisDay || noTokensLeft;
 
           if (alreadyClaimedThisDay) btn.textContent = "Day Claimed";
@@ -713,15 +745,11 @@ const firebaseConfig = {
       els.freeDialog.showModal();
     }
 
-    function getRuleText(offset) {
-      if (offset < 0) return "Last week is view-only. Past bookings cannot be changed here.";
-      if (offset === 0) return "This week is open. Today can be claimed for free without using a weekly token. Other days use one advance token.";
-      if (offset === 1) {
-        return canBookNextWeek()
-          ? "Next week is open because it is at least Thursday 2:30pm this week. Next-week claims use next week’s token allowance."
-          : "Next week is locked until Thursday at 2:30pm this week.";
-      }
-      return "Only this week and next week are available for booking. Further weeks are view-only.";
+    function getWeekOpenState(offset) {
+      if (offset < 0) return false;
+      if (offset === 0) return true;
+      if (offset === 1) return canBookNextWeek();
+      return false;
     }
 
     function canBookDate(date) {
