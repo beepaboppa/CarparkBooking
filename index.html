@@ -608,17 +608,42 @@
       body { padding: 8px; }
       h1 { font-size: 1.6rem; }
       .subtitle { display: none; }
+      .hero { gap: 8px; margin-bottom: 10px; }
       .booking-card { padding: 8px; gap: 8px; }
       .top-strip { gap: 8px; }
+      .top-strip .compact-card:nth-child(1) { order: 2; text-align: center; justify-items: center; }
+      .top-strip .compact-card:nth-child(2) { order: 1; }
+      .top-strip .compact-card:nth-child(3) { order: 3; }
+      .allowance-week { display: none; }
+      .token { font-size: 1.02rem; }
       .compact-card { padding: 9px 10px; }
-      .week-nav { grid-template-columns: 1fr; gap: 6px; }
-      .week-center { flex-direction: column; }
+      .status-line { justify-content: center; font-size: 0.98rem; gap: 6px; }
+      .status-badge { font-size: 0.78rem; padding: 3px 9px; }
+      .week-nav {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        grid-template-areas:
+          "center center"
+          "prev next";
+      }
+      #prevWeekBtn { grid-area: prev; }
+      #nextWeekBtn { grid-area: next; }
+      .week-center { grid-area: center; flex-direction: column; }
       .week-range,
       .week-context { font-size: 1.02rem; }
       .today-panel { width: 100%; }
       .today-main { flex-direction: column; }
-      .name-row { grid-template-columns: 1fr; }
-      .presence-line { white-space: normal; }
+      .name-row {
+        grid-template-columns: minmax(130px, 50%) 1fr;
+        gap: 10px;
+      }
+      .selected-email { display: none; }
+      .presence-line {
+        white-space: normal;
+        color: #075985;
+        font-weight: 900;
+        align-self: center;
+      }
       .days { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
       .day.weekend { display: none; }
       .day { padding: 5px 3px; gap: 5px; border-radius: 10px; }
@@ -632,6 +657,16 @@
       .park-state,
       .park-state.taken-name { font-size: 0.78rem; }
       .taken-row { gap: 4px; }
+      #prevWeekBtn,
+      #nextWeekBtn {
+        width: 100%;
+        padding: 8px 8px;
+        font-size: 0.86rem;
+      }
+      .jump-btn {
+        padding: 8px 16px;
+        font-size: 0.86rem;
+      }
       .taken-row button { padding: 3px 5px; font-size: 0.58rem; }
     }
   </style>
@@ -958,6 +993,7 @@
         els.removeDialog.close();
       });
 
+      window.addEventListener("resize", render);
       window.addEventListener("pagehide", clearCurrentPresence);
       window.addEventListener("beforeunload", clearCurrentPresence);
     }
@@ -1239,7 +1275,10 @@
       syncSelectedEmail();
 
       els.allowanceWeek.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
-      els.tokenText.textContent = user ? `${tokensRemaining} / ${user.weeklyTokens} left` : "No user selected";
+      const isMobileView = window.matchMedia("(max-width: 620px)").matches;
+      els.tokenText.textContent = user
+        ? (isMobileView ? `${tokensRemaining} left` : `${tokensRemaining} / ${user.weeklyTokens} left`)
+        : "No user selected";
 
       els.weekRange.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
       els.weekContext.textContent = weekOffset === 0 ? "This week" : weekLabel;
