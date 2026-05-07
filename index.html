@@ -82,6 +82,9 @@
     .status-card {
       padding: 12px 14px;
       min-width: 245px;
+      text-align: center;
+      display: grid;
+      justify-items: center;
     }
 
     .small-label {
@@ -97,6 +100,7 @@
       font-weight: 900;
       font-size: 1rem;
       line-height: 1.2;
+      text-align: center;
     }
 
     .allowance-week {
@@ -104,6 +108,7 @@
       font-size: 0.82rem;
       font-weight: 900;
       margin-bottom: 3px;
+      text-align: center;
     }
 
     .grid {
@@ -261,17 +266,26 @@
 
     .today-panel {
       display: none;
-      margin-bottom: 10px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      background: rgba(251, 191, 36, 0.16);
-      border: 1px solid rgba(251, 191, 36, 0.45);
-      grid-template-columns: 1fr auto;
-      gap: 10px;
+      margin-bottom: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(251, 191, 36, 0.14);
+      border: 1px solid rgba(251, 191, 36, 0.38);
       align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: fit-content;
+      max-width: 100%;
+      margin-left: auto;
+      margin-right: auto;
     }
 
-    .today-panel.visible { display: grid; }
+    .today-panel.visible { display: inline-flex; }
+
+    .today-panel .small-label { display: none; }
+    .today-panel .week-title { font-size: 0.9rem; }
+    .today-panel .week-title::after { content: ":"; }
+    .today-panel button { padding: 6px 12px; font-size: 0.82rem; }
 
     .days {
       display: grid;
@@ -288,6 +302,7 @@
       display: grid;
       align-content: start;
       gap: 7px;
+      text-align: center;
     }
 
     .day.today {
@@ -296,20 +311,21 @@
     }
 
     .day.weekend {
-      background: #eef2f7;
-      border-color: #d7dee8;
-      opacity: 0.82;
+      background: #d8dee8;
+      border-color: #b8c2d0;
+      opacity: 0.92;
     }
 
     .day-head {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       gap: 8px;
-      align-items: start;
+      align-items: center;
+      text-align: center;
     }
 
     .day-name { font-weight: 900; font-size: 0.95rem; }
-    .date { color: var(--muted); font-size: 0.78rem; }
+    .date { color: var(--text); font-size: 0.78rem; }
 
     .park {
       border-radius: 11px;
@@ -318,9 +334,14 @@
       border: 1px solid #dbe2ea;
       display: grid;
       gap: 3px;
+      justify-items: center;
+      text-align: center;
     }
 
-    .park.available { border-color: rgba(34, 197, 94, 0.45); }
+    .park.available {
+      background: rgba(34, 197, 94, 0.10);
+      border-color: rgba(34, 197, 94, 0.35);
+    }
     .park.taken {
       background: rgba(239, 68, 68, 0.10);
       border-color: rgba(239, 68, 68, 0.35);
@@ -328,8 +349,8 @@
     }
 
     .day.weekend .park {
-      background: #e5eaf1;
-      border-color: #d1d8e3;
+      background: #cbd3df;
+      border-color: #aeb8c7;
     }
 
     .park-no { font-weight: 900; font-size: 0.9rem; }
@@ -337,9 +358,11 @@
 
     .claim-row {
       display: flex;
+      justify-content: center;
       gap: 6px;
       margin-top: 5px;
       flex-wrap: wrap;
+      width: 100%;
     }
 
     .claim-row button { padding: 6px 9px; font-size: 0.78rem; }
@@ -482,7 +505,7 @@
             <div class="small-label">Same-day option</div>
             <div class="week-title">Free Carpark Today</div>
           </div>
-          <button id="freeTodayBtn" class="gold">Free Carpark Today</button>
+          <button id="freeTodayBtn" class="gold">Claim</button>
         </div>
 
         <div class="days" id="daysGrid"></div>
@@ -908,7 +931,7 @@
 
       const head = document.createElement("div");
       head.className = "day-head";
-      head.innerHTML = `<div><div class="day-name">${date.toLocaleDateString(undefined, { weekday: "short" })}</div><div class="date">${formatShortDate(date)}</div></div>`;
+      head.innerHTML = `<div><div class="day-name">${date.toLocaleDateString(undefined, { weekday: "long" })}</div><div class="date">${formatShortDate(date)}</div></div>`;
       day.appendChild(head);
 
       CARPARKS.forEach((park) => {
