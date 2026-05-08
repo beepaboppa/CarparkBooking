@@ -539,6 +539,23 @@
       margin: 0;
     }
 
+    .owner-warning {
+      display: none;
+      color: #dc2626;
+      background: rgba(239, 68, 68, 0.10);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.94rem;
+      line-height: 1.35;
+      font-weight: 900;
+      margin: 0;
+    }
+
+    .owner-warning.visible {
+      display: block;
+    }
+
     .modal-actions {
       display: flex;
       justify-content: flex-end;
@@ -883,6 +900,7 @@
       </div>
 
       <p id="removeDialogText" class="modal-copy"></p>
+      <p id="removeWarningText" class="owner-warning"></p>
 
       <div class="modal-actions">
         <button value="cancel" class="ghost">Cancel</button>
@@ -949,6 +967,7 @@
       confirmFreeBtn: document.querySelector("#confirmFreeBtn"),
       removeDialog: document.querySelector("#removeDialog"),
       removeDialogText: document.querySelector("#removeDialogText"),
+      removeWarningText: document.querySelector("#removeWarningText"),
       confirmRemoveBtn: document.querySelector("#confirmRemoveBtn"),
       daysGrid: document.querySelector("#daysGrid"),
       toast: document.querySelector("#toast")
@@ -1457,7 +1476,10 @@
     }
 
     function openRemoveDialog(dateKey, carpark, claim) {
-      pendingRemoval = { dateKey, carpark };
+      const selectedUser = getSelectedUser();
+      const isOwnClaim = claimBelongsToUser(claim, selectedUser);
+      pendingRemoval = { dateKey, carpark, isOwnClaim };
+
       const date = parseDateKey(dateKey);
       const restoresToken = Number(claim.tokenCost || 0) > 0 || claim.mode === "weekly-token";
       const displayName = getClaimDisplayName(claim);
@@ -1467,6 +1489,14 @@
         (restoresToken
           ? "This will restore that person's token for that week."
           : "This was a free same-day claim, so no token will be restored.");
+
+      if (!isOwnClaim) {
+        els.removeWarningText.textContent = `Warning: this spot is not yours. It is currently booked by ${displayName}. Only remove it if you have checked with them.`;
+        els.removeWarningText.classList.add("visible");
+      } else {
+        els.removeWarningText.textContent = "";
+        els.removeWarningText.classList.remove("visible");
+      }
 
       els.removeDialog.showModal();
     }
