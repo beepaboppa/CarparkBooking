@@ -845,10 +845,7 @@
         <input id="newUserName" type="text" autocomplete="off" />
       </div>
 
-      <div>
-        <label for="newUserTokens">Weekly allowance</label>
-        <input id="newUserTokens" type="number" min="0" max="10" step="1" value="1" />
-      </div>
+      <p class="modal-copy">Weekly allowance is fixed at 1 booking token per week.</p>
 
       <p id="addUserError" class="gate-error"></p>
 
@@ -909,7 +906,7 @@
 
     // IMPORTANT: change this to the email address you created in Firebase Authentication.
     // The shared PIN/password is NOT stored here. Users type it into the unlock screen.
-    const SHARED_LOGIN_EMAIL = "carpark-access@example.com";
+    const SHARED_LOGIN_EMAIL = "carpark-access@internal.local";
 
     let USERS = [];
     let usersById = new Map();
@@ -918,6 +915,7 @@
     const USER_COOKIE = "carpark_selected_user_id_v5";
     const USER_STORAGE_KEY = "carpark_selected_user_id_v5";
     const BROWSER_ID_KEY = "carpark_browser_id_v1";
+    const DEFAULT_WEEKLY_TOKENS = 1;
 
     const els = {
       app: document.querySelector("#app"),
@@ -932,7 +930,6 @@
       addUserBtn: document.querySelector("#addUserBtn"),
       addUserDialog: document.querySelector("#addUserDialog"),
       newUserName: document.querySelector("#newUserName"),
-      newUserTokens: document.querySelector("#newUserTokens"),
       addUserError: document.querySelector("#addUserError"),
       confirmAddUserBtn: document.querySelector("#confirmAddUserBtn"),
       statusBox: document.querySelector("#statusBox"),
@@ -1235,7 +1232,6 @@
       }
 
       els.newUserName.value = "";
-      els.newUserTokens.value = "1";
       els.addUserError.textContent = "";
       els.addUserDialog.showModal();
       setTimeout(() => els.newUserName.focus(), 0);
@@ -1243,15 +1239,10 @@
 
     async function addUserFromDialog() {
       const name = els.newUserName.value.trim();
-      const weeklyTokens = Number.parseInt(els.newUserTokens.value, 10);
+      const weeklyTokens = DEFAULT_WEEKLY_TOKENS;
 
       if (!name) {
         els.addUserError.textContent = "Enter a name.";
-        return;
-      }
-
-      if (!Number.isInteger(weeklyTokens) || weeklyTokens < 0 || weeklyTokens > 10) {
-        els.addUserError.textContent = "Weekly allowance must be a whole number from 0 to 10.";
         return;
       }
 
@@ -1695,7 +1686,7 @@
     }
 
     function getTokensRemainingForWeek(date, source, user) {
-      return Math.max(0, Number(user.weeklyTokens || 0) - getTokenClaimsForWeek(date, source, user));
+      return Math.max(0, DEFAULT_WEEKLY_TOKENS - getTokenClaimsForWeek(date, source, user));
     }
 
     function getTokenClaimsForWeek(date, source, user) {
