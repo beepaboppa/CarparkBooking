@@ -178,9 +178,23 @@
 
     .name-row {
       display: grid;
-      grid-template-columns: minmax(150px, 260px) 1fr;
+      grid-template-columns: minmax(150px, 220px) auto 1fr;
       gap: 10px;
       align-items: center;
+    }
+
+    .add-user-btn {
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.86rem;
+    }
+
+    .gate-error {
+      color: #b91c1c;
+      font-size: 0.86rem;
+      font-weight: 800;
+      margin: 0;
+      min-height: 1.1em;
     }
 
     .selected-email {
@@ -677,8 +691,12 @@
       }
       .today-note { font-size: 0.68rem; }
       .name-row {
-        grid-template-columns: minmax(130px, 50%) 1fr;
-        gap: 10px;
+        grid-template-columns: minmax(120px, 42%) auto 1fr;
+        gap: 6px;
+      }
+      .add-user-btn {
+        padding: 8px 9px;
+        font-size: 0.76rem;
       }
       .presence-line {
         white-space: normal;
@@ -734,8 +752,8 @@
           <label for="userSelect" class="name-label">Select your name</label>
           <div class="name-row">
             <select id="userSelect"></select>
-            <div id="selectedEmail" class="selected-email"></div>
-            <div id="presenceLine" class="presence-line">Connecting...</div>
+            <button id="addUserBtn" class="ghost add-user-btn" type="button">Add name</button>
+            <div id="presenceLine" class="presence-line">Locked</div>
           </div>
         </aside>
 
@@ -774,7 +792,26 @@
     </section>
   </main>
 
-  <section id="nameGate" class="name-gate visible" aria-modal="true" role="dialog">
+  <section id="authGate" class="name-gate visible" aria-modal="true" role="dialog">
+    <div class="name-gate-card">
+      <div>
+        <p class="small-label">Private access</p>
+        <h2 class="name-gate-title">Enter access PIN</h2>
+      </div>
+
+      <p class="modal-copy">Enter the shared internal PIN/password. This is checked by Firebase Authentication and is not stored in this HTML file.</p>
+
+      <div>
+        <label for="pinInput">PIN / password</label>
+        <input id="pinInput" type="password" autocomplete="current-password" />
+      </div>
+
+      <p id="pinError" class="gate-error"></p>
+      <button id="unlockBtn" class="primary">Unlock</button>
+    </div>
+  </section>
+
+  <section id="nameGate" class="name-gate" aria-modal="true" role="dialog">
     <div class="name-gate-card">
       <div>
         <p class="small-label">Before you start</p>
@@ -785,13 +822,42 @@
 
       <div>
         <label for="gateUserSelect">Your name</label>
-        <select id="gateUserSelect"></select>
-        <div id="gateSelectedEmail" class="selected-email"></div>
+        <div class="name-row">
+          <select id="gateUserSelect"></select>
+          <button id="gateAddUserBtn" class="ghost add-user-btn" type="button">Add name</button>
+          <div></div>
+        </div>
       </div>
 
       <button id="confirmNameBtn" class="primary">Continue</button>
     </div>
   </section>
+
+  <dialog id="addUserDialog">
+    <form method="dialog" class="modal-content">
+      <div>
+        <p class="small-label">Add private user</p>
+        <h3 class="modal-title">Add name</h3>
+      </div>
+
+      <div>
+        <label for="newUserName">Name</label>
+        <input id="newUserName" type="text" autocomplete="off" />
+      </div>
+
+      <div>
+        <label for="newUserTokens">Weekly allowance</label>
+        <input id="newUserTokens" type="number" min="0" max="10" step="1" value="1" />
+      </div>
+
+      <p id="addUserError" class="gate-error"></p>
+
+      <div class="modal-actions">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button id="confirmAddUserBtn" value="default" class="primary">Add name</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="freeDialog">
     <form method="dialog" class="modal-content">
@@ -841,26 +907,36 @@
       databaseURL: "https://carpark-booking-583cc-default-rtdb.firebaseio.com/"
     };
 
-    const USERS = [
-      { name: "James", email: "james@example.com", weeklyTokens: 1 },
-      { name: "Sarah", email: "sarah@example.com", weeklyTokens: 1 },
-      { name: "Alex", email: "alex@example.com", weeklyTokens: 1 }
-    ];
+    // IMPORTANT: change this to the email address you created in Firebase Authentication.
+    // The shared PIN/password is NOT stored here. Users type it into the unlock screen.
+    const SHARED_LOGIN_EMAIL = "carpark-access@example.com";
+
+    let USERS = [];
+    let usersById = new Map();
 
     const CARPARKS = ["44", "45", "126"];
-    const USER_COOKIE = "carpark_selected_user_email_v4";
-    const USER_STORAGE_KEY = "carpark_selected_user_email_v4";
-    const BOOKINGS_KEY = "carpark_bookings_demo_v4";
+    const USER_COOKIE = "carpark_selected_user_id_v5";
+    const USER_STORAGE_KEY = "carpark_selected_user_id_v5";
+    const BROWSER_ID_KEY = "carpark_browser_id_v1";
 
     const els = {
       app: document.querySelector("#app"),
+      authGate: document.querySelector("#authGate"),
+      pinInput: document.querySelector("#pinInput"),
+      pinError: document.querySelector("#pinError"),
+      unlockBtn: document.querySelector("#unlockBtn"),
       nameGate: document.querySelector("#nameGate"),
       gateUserSelect: document.querySelector("#gateUserSelect"),
-      gateSelectedEmail: document.querySelector("#gateSelectedEmail"),
+      gateAddUserBtn: document.querySelector("#gateAddUserBtn"),
       confirmNameBtn: document.querySelector("#confirmNameBtn"),
+      addUserBtn: document.querySelector("#addUserBtn"),
+      addUserDialog: document.querySelector("#addUserDialog"),
+      newUserName: document.querySelector("#newUserName"),
+      newUserTokens: document.querySelector("#newUserTokens"),
+      addUserError: document.querySelector("#addUserError"),
+      confirmAddUserBtn: document.querySelector("#confirmAddUserBtn"),
       statusBox: document.querySelector("#statusBox"),
       userSelect: document.querySelector("#userSelect"),
-      selectedEmail: document.querySelector("#selectedEmail"),
       presenceLine: document.querySelector("#presenceLine"),
       allowanceWeek: document.querySelector("#allowanceWeek"),
       tokenText: document.querySelector("#tokenText"),
@@ -885,6 +961,8 @@
     let weekOffset = 0;
     let pendingRemoval = null;
     let usingFirebase = false;
+    let isAuthenticated = false;
+    let authApi = null;
     let firestoreApi = null;
     let realtimeApi = null;
     let unsubscribeBookings = null;
@@ -895,33 +973,73 @@
     init();
 
     async function init() {
-      populateUserSelects();
-      loadUserFromSavedSelection();
       wireEvents();
-      await setupStorage();
-      await loadBookings();
-      startPresence();
-      render();
-    }
+      await setupFirebase();
 
-    async function setupStorage() {
-      const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
-
-      if (!hasFirebaseConfig) {
-        els.presenceLine.textContent = "Demo mode: bookings are stored only in this browser.";
+      if (!usingFirebase || !authApi) {
+        els.pinError.textContent = "Firebase could not load. Check your Firebase config and internet connection.";
+        els.presenceLine.textContent = "Locked";
         return;
       }
 
+      authApi.onAuthStateChanged(authApi.auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          isAuthenticated = true;
+          await finishUnlock();
+        } else {
+          isAuthenticated = false;
+          await lockApp();
+        }
+      });
+    }
+
+    async function setupFirebase() {
+      const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
+      if (!hasFirebaseConfig) return;
+
       try {
         const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
-        const { getFirestore, doc, onSnapshot, setDoc, runTransaction } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-        const { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp, remove } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
+        const {
+          getAuth,
+          signInWithEmailAndPassword,
+          onAuthStateChanged,
+          setPersistence,
+          browserLocalPersistence
+        } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
+        const {
+          getFirestore,
+          doc,
+          collection,
+          getDocs,
+          onSnapshot,
+          setDoc,
+          runTransaction
+        } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+        const {
+          getDatabase,
+          ref,
+          set,
+          onValue,
+          onDisconnect,
+          serverTimestamp,
+          remove
+        } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        await setPersistence(auth, browserLocalPersistence);
+
+        authApi = {
+          auth,
+          signInWithEmailAndPassword,
+          onAuthStateChanged
+        };
 
         firestoreApi = {
           db: getFirestore(app),
           doc,
+          collection,
+          getDocs,
           onSnapshot,
           setDoc,
           runTransaction
@@ -938,59 +1056,118 @@
         };
 
         usingFirebase = true;
-        els.presenceLine.textContent = "Shared mode";
       } catch (error) {
         console.error(error);
-        els.presenceLine.textContent = "Firebase could not load, so this is running in local demo mode.";
+        usingFirebase = false;
       }
+    }
+
+    async function unlockWithPin() {
+      const password = els.pinInput.value.trim();
+
+      if (!password) {
+        els.pinError.textContent = "Enter the shared PIN/password.";
+        return;
+      }
+
+      els.unlockBtn.disabled = true;
+      els.pinError.textContent = "Checking...";
+
+      try {
+        await authApi.signInWithEmailAndPassword(authApi.auth, SHARED_LOGIN_EMAIL, password);
+        els.pinInput.value = "";
+        els.pinError.textContent = "";
+      } catch (error) {
+        console.error(error);
+        els.pinError.textContent = "Incorrect PIN/password, or the Firebase access account email does not match this HTML file.";
+      } finally {
+        els.unlockBtn.disabled = false;
+      }
+    }
+
+    async function finishUnlock() {
+      closeAuthGate();
+      await loadUsers();
+      populateUserSelects();
+      loadUserFromSavedSelection();
+      await loadBookings();
+      startPresence();
+      render();
+    }
+
+    async function lockApp() {
+      await clearCurrentPresence();
+      unsubscribeBookings?.();
+      unsubscribePresence?.();
+      unsubscribeBookings = null;
+      unsubscribePresence = null;
+      bookings = {};
+      USERS = [];
+      usersById = new Map();
+      populateUserSelects();
+      els.presenceLine.textContent = "Locked";
+      els.tokenText.textContent = "Locked";
+      els.daysGrid.innerHTML = "";
+      openAuthGate();
+    }
+
+    async function loadUsers() {
+      const usersRef = firestoreApi.collection(firestoreApi.db, "users");
+      const snap = await firestoreApi.getDocs(usersRef);
+
+      USERS = snap.docs
+        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter(user => user.active !== false)
+        .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+
+      usersById = new Map(USERS.map(user => [user.id, user]));
     }
 
     function populateUserSelects() {
       const options =
         `<option value="">Select name...</option>` +
-        USERS.map(user => `<option value="${escapeHtml(user.email)}">${escapeHtml(user.name)}</option>`).join("");
+        USERS.map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`).join("");
 
       els.userSelect.innerHTML = options;
       els.gateUserSelect.innerHTML = options;
     }
 
     function loadUserFromSavedSelection() {
-      const savedEmail = getSavedSelectedEmail();
-      const valid = savedEmail && USERS.some(user => user.email === savedEmail);
+      const savedUserId = getSavedSelectedUserId();
+      const valid = savedUserId && USERS.some(user => user.id === savedUserId);
 
       if (valid) {
-        els.userSelect.value = savedEmail;
-        els.gateUserSelect.value = savedEmail;
+        els.userSelect.value = savedUserId;
+        els.gateUserSelect.value = savedUserId;
         closeNameGate();
       } else {
         els.userSelect.value = "";
         els.gateUserSelect.value = "";
         openNameGate();
       }
-
-      syncGateEmail();
-      syncSelectedEmail();
     }
 
     function wireEvents() {
+      els.unlockBtn.addEventListener("click", unlockWithPin);
+      els.pinInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") unlockWithPin();
+      });
+
       els.userSelect.addEventListener("change", async () => {
         await clearCurrentPresence();
 
         if (!els.userSelect.value) {
-          clearSavedSelectedEmail();
+          clearSavedSelectedUserId();
           openNameGate();
           render();
           return;
         }
 
-        saveSelectedEmail(els.userSelect.value);
+        saveSelectedUserId(els.userSelect.value);
         els.gateUserSelect.value = els.userSelect.value;
-        syncGateEmail();
         startPresence();
         render();
       });
-
-      els.gateUserSelect.addEventListener("change", syncGateEmail);
 
       els.confirmNameBtn.addEventListener("click", () => {
         if (!els.gateUserSelect.value) {
@@ -998,11 +1175,19 @@
           return;
         }
 
-        saveSelectedEmail(els.gateUserSelect.value);
+        saveSelectedUserId(els.gateUserSelect.value);
         els.userSelect.value = els.gateUserSelect.value;
         closeNameGate();
         startPresence();
         render();
+      });
+
+      els.addUserBtn.addEventListener("click", openAddUserDialog);
+      els.gateAddUserBtn.addEventListener("click", openAddUserDialog);
+
+      els.confirmAddUserBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        await addUserFromDialog();
       });
 
       els.prevWeekBtn.addEventListener("click", () => {
@@ -1043,12 +1228,60 @@
       window.addEventListener("beforeunload", clearCurrentPresence);
     }
 
-    async function loadBookings() {
-      if (!usingFirebase) {
-        bookings = JSON.parse(localStorage.getItem(BOOKINGS_KEY) || "{}");
+    function openAddUserDialog() {
+      if (!isAuthenticated) {
+        openAuthGate();
         return;
       }
 
+      els.newUserName.value = "";
+      els.newUserTokens.value = "1";
+      els.addUserError.textContent = "";
+      els.addUserDialog.showModal();
+      setTimeout(() => els.newUserName.focus(), 0);
+    }
+
+    async function addUserFromDialog() {
+      const name = els.newUserName.value.trim();
+      const weeklyTokens = Number.parseInt(els.newUserTokens.value, 10);
+
+      if (!name) {
+        els.addUserError.textContent = "Enter a name.";
+        return;
+      }
+
+      if (!Number.isInteger(weeklyTokens) || weeklyTokens < 0 || weeklyTokens > 10) {
+        els.addUserError.textContent = "Weekly allowance must be a whole number from 0 to 10.";
+        return;
+      }
+
+      const userId = makeUserId(name);
+      const userRef = firestoreApi.doc(firestoreApi.db, "users", userId);
+
+      try {
+        await firestoreApi.setDoc(userRef, {
+          name,
+          weeklyTokens,
+          active: true
+        });
+
+        await loadUsers();
+        populateUserSelects();
+        saveSelectedUserId(userId);
+        els.userSelect.value = userId;
+        els.gateUserSelect.value = userId;
+        closeNameGate();
+        els.addUserDialog.close();
+        startPresence();
+        render();
+        showToast(`${name} added.`);
+      } catch (error) {
+        console.error(error);
+        els.addUserError.textContent = "Could not add name. Check Firestore rules.";
+      }
+    }
+
+    async function loadBookings() {
       const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
       unsubscribeBookings?.();
 
@@ -1061,21 +1294,16 @@
       });
     }
 
-    async function saveBookings() {
-      if (!usingFirebase) {
-        localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
-        return;
-      }
-
-      const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
-      await firestoreApi.setDoc(docRef, { bookings });
-    }
-
     async function claimCarpark(dateKey, carpark) {
       const user = getSelectedUser();
       const todayKey = getDateKey(new Date());
       const requestedDate = parseDateKey(dateKey);
       const costsToken = dateKey !== todayKey;
+
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
 
       if (!user) {
         openNameGate();
@@ -1088,107 +1316,69 @@
         return;
       }
 
-      if (usingFirebase) {
-        const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
+      const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
 
-        try {
-          const updatedBookings = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
-            const snap = await transaction.get(docRef);
-            const current = snap.exists() ? snap.data().bookings || {} : {};
-            const existing = current?.[dateKey]?.[carpark];
+      try {
+        const updatedBookings = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
+          const snap = await transaction.get(docRef);
+          const current = snap.exists() ? snap.data().bookings || {} : {};
+          const existing = current?.[dateKey]?.[carpark];
 
-            if (existing) throw new Error(`Carpark ${carpark} is already taken.`);
-            if (userUsedOnDate(current, dateKey, user.email)) throw new Error("You have already claimed a carpark on this day.");
-            if (costsToken && getTokensRemainingForWeek(requestedDate, current, user) <= 0) {
-              throw new Error("You have no tokens left for that week.");
-            }
+          if (existing) throw new Error(`Carpark ${carpark} is already taken.`);
+          if (userUsedOnDate(current, dateKey, user)) throw new Error("You have already claimed a carpark on this day.");
+          if (costsToken && getTokensRemainingForWeek(requestedDate, current, user) <= 0) {
+            throw new Error("You have no tokens left for that week.");
+          }
 
-            current[dateKey] ??= {};
-            current[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
+          current[dateKey] ??= {};
+          current[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
 
-            transaction.set(docRef, { bookings: current });
-            return current;
-          });
+          transaction.set(docRef, { bookings: current });
+          return current;
+        });
 
-          bookings = updatedBookings;
-          render();
-          showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
-        } catch (error) {
-          showToast(error.message || "Could not claim carpark.");
-        }
-
-        return;
+        bookings = updatedBookings;
+        render();
+        showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
+      } catch (error) {
+        showToast(error.message || "Could not claim carpark.");
       }
-
-      bookings[dateKey] ??= {};
-
-      if (bookings[dateKey][carpark]) {
-        showToast(`Carpark ${carpark} is already taken.`);
-        return;
-      }
-
-      if (userUsedOnDate(bookings, dateKey, user.email)) {
-        showToast("You have already claimed a carpark on this day.");
-        return;
-      }
-
-      if (costsToken && getTokensRemainingForWeek(requestedDate, bookings, user) <= 0) {
-        showToast("You have no tokens left for that week.");
-        return;
-      }
-
-      bookings[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
-      await saveBookings();
-      showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
-      render();
     }
 
     async function removeCarparkClaim(dateKey, carpark) {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
       const date = parseDateKey(dateKey);
+      const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
 
-      if (usingFirebase) {
-        const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
+      try {
+        const updatedBookings = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
+          const snap = await transaction.get(docRef);
+          const current = snap.exists() ? snap.data().bookings || {} : {};
 
-        try {
-          const updatedBookings = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
-            const snap = await transaction.get(docRef);
-            const current = snap.exists() ? snap.data().bookings || {} : {};
+          if (!current?.[dateKey]?.[carpark]) throw new Error("That claim no longer exists.");
 
-            if (!current?.[dateKey]?.[carpark]) throw new Error("That claim no longer exists.");
+          delete current[dateKey][carpark];
+          if (Object.keys(current[dateKey]).length === 0) delete current[dateKey];
 
-            delete current[dateKey][carpark];
-            if (Object.keys(current[dateKey]).length === 0) delete current[dateKey];
+          transaction.set(docRef, { bookings: current });
+          return current;
+        });
 
-            transaction.set(docRef, { bookings: current });
-            return current;
-          });
-
-          bookings = updatedBookings;
-          render();
-          showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
-        } catch (error) {
-          showToast(error.message || "Could not remove claim.");
-        }
-
-        return;
+        bookings = updatedBookings;
+        render();
+        showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
+      } catch (error) {
+        showToast(error.message || "Could not remove claim.");
       }
-
-      if (!bookings?.[dateKey]?.[carpark]) {
-        showToast("That claim no longer exists.");
-        return;
-      }
-
-      delete bookings[dateKey][carpark];
-      if (Object.keys(bookings[dateKey]).length === 0) delete bookings[dateKey];
-
-      await saveBookings();
-      showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
-      render();
     }
 
     function startPresence() {
-      if (!realtimeApi) {
-        if (!usingFirebase) els.presenceLine.textContent = "Demo mode";
+      if (!realtimeApi || !isAuthenticated) {
+        els.presenceLine.textContent = isAuthenticated ? "Shared mode" : "Locked";
         return;
       }
 
@@ -1200,14 +1390,14 @@
 
       clearCurrentPresence();
 
-      const key = presenceKey(user.email);
+      const key = `${presenceKey(user.id)}_${getBrowserId()}`;
       currentPresenceRef = realtimeApi.ref(realtimeApi.db, `presence/${key}`);
 
       realtimeApi.onDisconnect(currentPresenceRef).remove();
 
       realtimeApi.set(currentPresenceRef, {
         name: user.name,
-        email: user.email,
+        userId: user.id,
         online: true,
         openedAt: realtimeApi.serverTimestamp(),
         lastSeen: realtimeApi.serverTimestamp()
@@ -1247,15 +1437,23 @@
         : "Shared mode";
     }
 
-    function presenceKey(email) {
-      return email.replace(/[.#$\/\[\]]/g, "_");
+    function presenceKey(value) {
+      return String(value).replace(/[.#$\/\[\]]/g, "_");
+    }
+
+    function getBrowserId() {
+      let browserId = localStorage.getItem(BROWSER_ID_KEY);
+      if (!browserId) {
+        browserId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+        localStorage.setItem(BROWSER_ID_KEY, browserId);
+      }
+      return presenceKey(browserId);
     }
 
     function buildClaimRecord(carpark, user, date, costsToken) {
       return {
         carpark,
-        person: user.name,
-        email: user.email,
+        userId: user.id,
         claimedAt: new Date().toISOString(),
         mode: costsToken ? "weekly-token" : "free-today",
         tokenCost: costsToken ? 1 : 0,
@@ -1271,9 +1469,10 @@
       pendingRemoval = { dateKey, carpark };
       const date = parseDateKey(dateKey);
       const restoresToken = Number(claim.tokenCost || 0) > 0 || claim.mode === "weekly-token";
+      const displayName = getClaimDisplayName(claim);
 
       els.removeDialogText.textContent =
-        `Remove Carpark ${carpark} for ${claim.person || "Unknown"} on ${formatShortDate(date)}? ` +
+        `Remove Carpark ${carpark} for ${displayName} on ${formatShortDate(date)}? ` +
         (restoresToken
           ? "This will restore that person's token for that week."
           : "This was a free same-day claim, so no token will be restored.");
@@ -1286,13 +1485,18 @@
       const todayKey = getDateKey(new Date());
       const available = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
 
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
       if (!user) {
         openNameGate();
         showToast("Select your name first.");
         return;
       }
 
-      if (userUsedOnDate(bookings, todayKey, user.email)) {
+      if (userUsedOnDate(bookings, todayKey, user)) {
         showToast("You have already claimed a carpark today.");
         return;
       }
@@ -1310,14 +1514,14 @@
     }
 
     function render() {
+      if (!isAuthenticated) return;
+
       const user = getSelectedUser();
       const weekStart = getMonday(addDays(new Date(), weekOffset * 7));
       const weekEnd = addDays(weekStart, 6);
       const weekLabel = getWeekLabel(weekOffset);
       const isOpen = isWeekOpen(weekStart);
       const tokensRemaining = user ? getTokensRemainingForWeek(weekStart, bookings, user) : 0;
-
-      syncSelectedEmail();
 
       els.allowanceWeek.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
       els.tokenText.textContent = user ? `${tokensRemaining} left` : "No user selected";
@@ -1331,7 +1535,7 @@
       const todayKey = getDateKey(new Date());
       const todayIsVisible = getDateKey(weekStart) <= todayKey && todayKey <= getDateKey(weekEnd);
       const availableToday = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
-      const userHasTodayClaim = user ? userUsedOnDate(bookings, todayKey, user.email) : false;
+      const userHasTodayClaim = user ? userUsedOnDate(bookings, todayKey, user) : false;
       els.todayPanel.classList.toggle("visible", todayIsVisible && availableToday.length > 0 && !userHasTodayClaim && weekOffset === 0);
 
       els.daysGrid.innerHTML = "";
@@ -1384,7 +1588,7 @@
           parkEl.innerHTML = `
             <div class="park-no"><span class="park-word">Carpark </span>${park}</div>
             <div class="taken-row">
-              <span class="park-state taken-name">${escapeHtml(claim.person || "Unknown")}</span>
+              <span class="park-state taken-name">${escapeHtml(getClaimDisplayName(claim))}</span>
             </div>
           `;
 
@@ -1396,7 +1600,7 @@
           takenRow.appendChild(removeBtn);
         } else {
           const costsToken = dateKey !== todayKey;
-          const alreadyClaimedThisDay = user ? userUsedOnDate(bookings, dateKey, user.email) : false;
+          const alreadyClaimedThisDay = user ? userUsedOnDate(bookings, dateKey, user) : false;
           const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, bookings, user) <= 0 : true;
           const canClaimThisCell = !isWeekend && canBookDate(date) && !!user && !alreadyClaimedThisDay && !noTokensLeft;
 
@@ -1482,14 +1686,19 @@
     }
 
     function getSelectedUser() {
-      return USERS.find(user => user.email === els.userSelect.value) || null;
+      return USERS.find(user => user.id === els.userSelect.value) || null;
+    }
+
+    function getClaimDisplayName(claim) {
+      if (claim?.userId && usersById.has(claim.userId)) return usersById.get(claim.userId).name;
+      return claim?.person || "Unknown";
     }
 
     function getTokensRemainingForWeek(date, source, user) {
-      return Math.max(0, user.weeklyTokens - getTokenClaimsForWeek(date, source, user.email));
+      return Math.max(0, Number(user.weeklyTokens || 0) - getTokenClaimsForWeek(date, source, user));
     }
 
-    function getTokenClaimsForWeek(date, source, email) {
+    function getTokenClaimsForWeek(date, source, user) {
       const start = getMonday(date);
       const end = addDays(start, 6);
       const startKey = getDateKey(start);
@@ -1500,20 +1709,39 @@
         if (dateKey < startKey || dateKey > endKey) return;
 
         Object.values(dayClaims || {}).forEach((claim) => {
-          const sameUser = claim.email === email;
           const usesToken = Number(claim.tokenCost || 0) > 0 || claim.mode === "weekly-token";
-          if (sameUser && usesToken) used += 1;
+          if (claimBelongsToUser(claim, user) && usesToken) used += 1;
         });
       });
 
       return used;
     }
 
-    function userUsedOnDate(source, dateKey, email) {
-      return Object.values(source?.[dateKey] || {}).some(claim => claim.email === email);
+    function userUsedOnDate(source, dateKey, user) {
+      return Object.values(source?.[dateKey] || {}).some(claim => claimBelongsToUser(claim, user));
+    }
+
+    function claimBelongsToUser(claim, user) {
+      if (!claim || !user) return false;
+      return claim.userId === user.id || claim.person === user.name || (user.email && claim.email === user.email);
+    }
+
+    function openAuthGate() {
+      els.app.classList.add("locked");
+      els.authGate.classList.add("visible");
+      els.nameGate.classList.remove("visible");
+      setTimeout(() => els.pinInput.focus(), 0);
+    }
+
+    function closeAuthGate() {
+      els.authGate.classList.remove("visible");
     }
 
     function openNameGate() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
       els.app.classList.add("locked");
       els.nameGate.classList.add("visible");
     }
@@ -1523,26 +1751,16 @@
       els.nameGate.classList.remove("visible");
     }
 
-    function syncGateEmail() {
-      const user = USERS.find(item => item.email === els.gateUserSelect.value);
-      els.gateSelectedEmail.textContent = user ? user.email : "";
+    function saveSelectedUserId(userId) {
+      localStorage.setItem(USER_STORAGE_KEY, userId);
+      setCookie(USER_COOKIE, userId, 365);
     }
 
-    function syncSelectedEmail() {
-      const user = getSelectedUser();
-      els.selectedEmail.textContent = user ? user.email : "";
-    }
-
-    function saveSelectedEmail(email) {
-      localStorage.setItem(USER_STORAGE_KEY, email);
-      setCookie(USER_COOKIE, email, 365);
-    }
-
-    function getSavedSelectedEmail() {
+    function getSavedSelectedUserId() {
       return localStorage.getItem(USER_STORAGE_KEY) || getCookie(USER_COOKIE);
     }
 
-    function clearSavedSelectedEmail() {
+    function clearSavedSelectedUserId() {
       localStorage.removeItem(USER_STORAGE_KEY);
       setCookie(USER_COOKIE, "", -1);
     }
@@ -1559,6 +1777,17 @@
         .map(item => item.trim())
         .find(item => item.startsWith(cookieName))
         ?.slice(cookieName.length) || "";
+    }
+
+    function makeUserId(name) {
+      const base = name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 44);
+
+      return base || `user-${Date.now()}`;
     }
 
     function getMonday(date) {
