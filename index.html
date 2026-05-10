@@ -540,7 +540,7 @@
       gap: 2px;
       text-align: center;
       background: #fff;
-      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, border-color 150ms ease;
       overflow: visible;
     }
 
@@ -562,9 +562,14 @@
     }
 
     .park.available.bookable:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 18px rgba(21, 128, 61, 0.18);
+      transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 12px 24px rgba(21, 128, 61, 0.22);
       background: linear-gradient(135deg, #166534, #14532d);
+    }
+
+    .park.available.bookable:active {
+      transform: translateY(0) scale(0.96);
+      box-shadow: 0 5px 12px rgba(21, 128, 61, 0.18);
     }
 
     .park.available.today-available {
@@ -579,14 +584,25 @@
     }
 
     .park.available.today-available:hover {
+      transform: translateY(-3px) scale(1.04);
       background: linear-gradient(135deg, #fde68a, #f59e0b);
-      box-shadow: 0 8px 18px rgba(251, 191, 36, 0.22);
+      box-shadow: 0 12px 24px rgba(251, 191, 36, 0.28);
+    }
+
+    .park.available.today-available:active {
+      transform: translateY(0) scale(0.96);
+      box-shadow: 0 5px 12px rgba(251, 191, 36, 0.2);
     }
 
     .park.available.disabled {
       background: var(--green-light);
       opacity: 1;
       cursor: default;
+    }
+
+    .park[role="button"]:focus-visible {
+      outline: 3px solid rgba(56, 189, 248, 0.55);
+      outline-offset: 3px;
     }
 
     .park.taken {
@@ -1330,6 +1346,8 @@
     const USER_STORAGE_KEY = "carpark_selected_user_id_v5";
     const BROWSER_ID_KEY = "carpark_browser_id_v1";
     const BUG_REPORTS_COLLECTION = "bugReports";
+    const PRESENCE_ACTIVE_MS = 2 * 60 * 1000;
+    const PRESENCE_HEARTBEAT_MS = 25 * 1000;
 
     /************************************************************
      * APP STATE
@@ -1400,6 +1418,7 @@
     let unsubscribeBugReports = null;
     let unsubscribePresence = null;
     let currentPresenceRef = null;
+    let presenceHeartbeatInterval = null;
     let weekTimerInterval = null;
     let blinkTodayAfterRender = false;
 
@@ -1461,7 +1480,8 @@
           onValue,
           onDisconnect,
           serverTimestamp,
-          remove
+          remove,
+          update
         } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-database.js`);
 
         const app = initializeApp(firebaseConfig);
@@ -1493,7 +1513,8 @@
           onValue,
           onDisconnect,
           serverTimestamp,
-          remove
+          remove,
+          update
         };
 
         usingFirebase = true;
@@ -1970,30 +1991,41 @@
 
       realtimeApi.onDisconnect(currentPresenceRef).remove();
 
-      realtimeApi.set(currentPresenceRef, {
-        name: user.name,
-        userId: user.id,
-        online: true,
-        openedAt: realtimeApi.serverTimestamp(),
-        lastSeen: realtimeApi.serverTimestamp()
-      });
+      writePresenceHeartbeat(user);
+      presenceHeartbeatInterval = setInterval(() => writePresenceHeartbeat(user), PRESENCE_HEARTBEAT_MS);
 
       const presenceListRef = realtimeApi.ref(realtimeApi.db, "presence");
 
       unsubscribePresence?.();
       unsubscribePresence = realtimeApi.onValue(presenceListRef, (snapshot) => {
-        const onlineUsers = Object.values(snapshot.val() || {})
-          .filter(item => item && item.online)
+        const activeUsers = Object.values(snapshot.val() || {})
+          .filter(isPresenceActive)
           .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
 
-        renderPresence(onlineUsers);
+        renderPresence(activeUsers);
       }, (error) => {
         console.error(error);
         els.presenceLine.textContent = "Shared mode";
       });
     }
 
+    function writePresenceHeartbeat(user) {
+      if (!realtimeApi || !currentPresenceRef || !user) return;
+
+      realtimeApi.update(currentPresenceRef, {
+        name: user.name,
+        userId: user.id,
+        online: true,
+        openedAt: realtimeApi.serverTimestamp(),
+        lastSeen: realtimeApi.serverTimestamp(),
+        lastSeenMs: Date.now()
+      });
+    }
+
     async function clearCurrentPresence() {
+      clearInterval(presenceHeartbeatInterval);
+      presenceHeartbeatInterval = null;
+
       if (!realtimeApi || !currentPresenceRef) return;
 
       try {
@@ -2005,11 +2037,17 @@
       currentPresenceRef = null;
     }
 
-    function renderPresence(onlineUsers) {
-      const names = [...new Set(onlineUsers.map(user => user.name).filter(Boolean))];
+    function isPresenceActive(item) {
+      if (!item || !item.name) return false;
+      const lastSeenMs = Number(item.lastSeenMs || 0);
+      return lastSeenMs > 0 && Date.now() - lastSeenMs <= PRESENCE_ACTIVE_MS;
+    }
+
+    function renderPresence(activeUsers) {
+      const names = [...new Set(activeUsers.map(user => user.name).filter(Boolean))];
 
       if (!names.length) {
-        els.presenceLine.textContent = "Shared mode";
+        els.presenceLine.textContent = "No one active";
         return;
       }
 
