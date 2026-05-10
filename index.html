@@ -19,6 +19,10 @@
       --weekend-inner: #c8d1de;
       --shadow: 0 12px 34px rgba(15, 23, 42, 0.07);
       --radius: 16px;
+      --calendar-column: 96px;
+      --calendar-gap: 9px;
+      --calendar-pad: 14px;
+      --calendar-outer-width: calc((var(--calendar-column) * 7) + (var(--calendar-gap) * 6) + (var(--calendar-pad) * 2));
     }
 
     * { box-sizing: border-box; }
@@ -75,8 +79,10 @@
     }
 
     .top-strip {
+      width: min(var(--calendar-outer-width), 100%);
+      margin: 0 auto;
       display: grid;
-      grid-template-columns: minmax(230px, 260px) minmax(360px, 1fr) minmax(220px, 240px);
+      grid-template-columns: 170px 1fr 150px;
       gap: 12px;
       align-items: stretch;
     }
@@ -318,10 +324,10 @@
     }
 
     .booking-card {
-      width: fit-content;
+      width: min(var(--calendar-outer-width), 100%);
       max-width: 100%;
       margin: 0 auto;
-      padding: 14px;
+      padding: var(--calendar-pad);
       display: grid;
       justify-items: center;
       gap: 12px;
@@ -399,13 +405,13 @@
 
     .days {
       display: grid;
-      grid-template-columns: repeat(7, 96px);
-      gap: 9px;
+      grid-template-columns: repeat(7, var(--calendar-column));
+      gap: var(--calendar-gap);
       justify-content: center;
     }
 
     .day {
-      width: 96px;
+      width: var(--calendar-column);
       background: #f8fafc;
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -467,8 +473,8 @@
     }
 
     .park {
-      width: 68px;
-      height: 68px;
+      width: 82px;
+      height: 82px;
       justify-self: center;
       position: relative;
       border-radius: 999px;
@@ -548,14 +554,14 @@
 
     .park-no {
       font-weight: 900;
-      font-size: 1.02rem;
+      font-size: 1.12rem;
       line-height: 1;
       color: var(--text);
     }
 
     .park-state {
       color: var(--muted);
-      font-size: 0.66rem;
+      font-size: 0.72rem;
       line-height: 1.05;
       font-weight: 900;
       word-break: break-word;
@@ -564,7 +570,7 @@
 
     .park-state.taken-name {
       color: var(--text);
-      font-size: 0.62rem;
+      font-size: 0.68rem;
       font-weight: 900;
       line-height: 1.05;
       max-width: 86%;
@@ -834,8 +840,9 @@
     }
 
 
-    @media (max-width: 1180px) {
+    @media (max-width: 860px) {
       .top-strip {
+        width: 100%;
         grid-template-columns: 1fr;
       }
     }
@@ -969,15 +976,15 @@
       .day-name-full { display: none; }
       .day-name-short { display: inline; }
       .park {
-        width: 46px;
-        height: 46px;
+        width: 55px;
+        height: 55px;
         padding: 4px 2px;
         gap: 1px;
       }
       .park-word { display: none; }
-      .park-no { font-size: 0.76rem; }
+      .park-no { font-size: 0.86rem; }
       .park-state,
-      .park-state.taken-name { font-size: 0.5rem; }
+      .park-state.taken-name { font-size: 0.56rem; }
       .taken-row button {
         width: 16px;
         height: 16px;
