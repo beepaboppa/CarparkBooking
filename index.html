@@ -665,6 +665,33 @@
       cursor: default;
     }
 
+    .park.updating {
+      pointer-events: none;
+      cursor: wait;
+      opacity: 0.82;
+    }
+
+    .park.updating::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: inherit;
+      border: 2px solid rgba(37, 99, 235, 0.25);
+      animation: updatingPulse 900ms ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes updatingPulse {
+      0%, 100% {
+        opacity: 0.25;
+        transform: scale(0.98);
+      }
+      50% {
+        opacity: 0.75;
+        transform: scale(1.04);
+      }
+    }
+
     .park[role="button"]:focus-visible {
       outline: 3px solid rgba(56, 189, 248, 0.55);
       outline-offset: 3px;
@@ -1435,6 +1462,7 @@
     const BUG_REPORTS_COLLECTION = "bugReports";
     const PRESENCE_ACTIVE_MS = 2 * 60 * 1000;
     const PRESENCE_HEARTBEAT_MS = 25 * 1000;
+    const BOOKING_SNAPSHOT_HOLD_MS = 1400;
 
     /************************************************************
      * APP STATE
@@ -1507,6 +1535,8 @@
     let currentPresenceRef = null;
     let presenceHeartbeatInterval = null;
     let weekTimerInterval = null;
+    let pendingBookingCells = new Map();
+    let bookingSnapshotHoldUntil = 0;
     let blinkTodayAfterRender = false;
 
     init();
@@ -1652,6 +1682,7 @@
       unsubscribeBookings = null;
       unsubscribePresence = null;
       bookings = {};
+      pendingBookingCells.clear();
       USERS = [];
       usersById = new Map();
       populateUserSelects();
@@ -1840,7 +1871,13 @@
       unsubscribeBookings?.();
 
       unsubscribeBookings = firestoreApi.onSnapshot(docRef, (snap) => {
-        bookings = snap.exists() ? snap.data().bookings || {} : {};
+        const incomingBookings = snap.exists() ? snap.data().bookings || {} : {};
+
+        if (Date.now() < bookingSnapshotHoldUntil && !sameBookings(incomingBookings, bookings)) {
+          return;
+        }
+
+        bookings = incomingBookings;
         render();
       }, (error) => {
         console.error(error);
@@ -1982,22 +2019,32 @@
       const todayKey = getDateKey(new Date());
       const requestedDate = parseDateKey(dateKey);
       const costsToken = dateKey !== todayKey;
+      const key = getCellKey(dateKey, carpark);
+
+      if (hasPendingCell(dateKey, carpark)) {
+        showToast("That carpark is still updating.");
+        return false;
+      }
 
       if (!isAuthenticated) {
         openAuthGate();
-        return;
+        return false;
       }
 
       if (!user) {
         openNameGate();
         showToast("Select your name first.");
-        return;
+        return false;
       }
 
       if (!canBookDate(requestedDate)) {
         showToast("That week is closed.");
-        return;
+        return false;
       }
+
+      const claimRecord = buildClaimRecord(carpark, user, requestedDate, costsToken);
+      setPendingCell(dateKey, carpark, { type: "claim", claim: claimRecord });
+      render();
 
       const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
 
@@ -2014,28 +2061,30 @@
           }
 
           current[dateKey] ??= {};
-          current[dateKey][carpark] = buildClaimRecord(carpark, user, requestedDate, costsToken);
+          current[dateKey][carpark] = claimRecord;
 
           transaction.set(docRef, { bookings: current });
           return current;
         });
 
+        bookingSnapshotHoldUntil = Date.now() + BOOKING_SNAPSHOT_HOLD_MS;
         bookings = updatedBookings;
+        pendingBookingCells.delete(key);
         render();
         showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
         return true;
       } catch (error) {
+        pendingBookingCells.delete(key);
+        render();
         showToast(error.message || "Could not claim carpark.");
         return false;
       }
     }
 
     async function animateAndClaimCarpark(parkEl, dateKey, carpark) {
-      if (!parkEl || parkEl.classList.contains("claiming")) return;
+      if (!parkEl || parkEl.classList.contains("claiming") || hasPendingCell(dateKey, carpark)) return;
 
       const user = getSelectedUser();
-      const originalClassName = parkEl.className;
-      const originalHtml = parkEl.innerHTML;
       const wasTodayAvailable = parkEl.classList.contains("today-available");
       const displayName = user?.name || "You";
 
@@ -2052,12 +2101,7 @@
       `;
 
       await delay(180);
-      const claimed = await claimCarpark(dateKey, carpark);
-
-      if (!claimed && parkEl.isConnected) {
-        parkEl.className = originalClassName;
-        parkEl.innerHTML = originalHtml;
-      }
+      await claimCarpark(dateKey, carpark);
     }
 
     function delay(ms) {
@@ -2067,11 +2111,20 @@
     async function removeCarparkClaim(dateKey, carpark) {
       if (!isAuthenticated) {
         openAuthGate();
-        return;
+        return false;
       }
 
+      if (hasPendingCell(dateKey, carpark)) {
+        showToast("That carpark is still updating.");
+        return false;
+      }
+
+      const key = getCellKey(dateKey, carpark);
       const date = parseDateKey(dateKey);
       const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
+
+      setPendingCell(dateKey, carpark, { type: "remove" });
+      render();
 
       try {
         const updatedBookings = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
@@ -2087,11 +2140,17 @@
           return current;
         });
 
+        bookingSnapshotHoldUntil = Date.now() + BOOKING_SNAPSHOT_HOLD_MS;
         bookings = updatedBookings;
+        pendingBookingCells.delete(key);
         render();
         showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
+        return true;
       } catch (error) {
+        pendingBookingCells.delete(key);
+        render();
         showToast(error.message || "Could not remove claim.");
+        return false;
       }
     }
 
@@ -2384,11 +2443,13 @@
       day.appendChild(head);
 
       CARPARKS.forEach((park) => {
-        const claim = bookings?.[dateKey]?.[park];
+        const pending = getPendingCell(dateKey, park);
+        const storedClaim = bookings?.[dateKey]?.[park];
+        const claim = pending?.type === "claim" ? pending.claim : pending?.type === "remove" ? null : storedClaim;
         const parkEl = document.createElement("div");
 
         if (claim) {
-          parkEl.className = "park taken";
+          parkEl.className = `park taken ${pending ? "updating" : ""}`;
           parkEl.innerHTML = `
             <div class="park-no">${park}</div>
             <div class="taken-row">
@@ -2396,23 +2457,25 @@
             </div>
           `;
 
-          const removeBtn = document.createElement("button");
-          removeBtn.className = "danger park-remove-btn";
-          removeBtn.innerHTML = `<span class="remove-x" aria-hidden="true">×</span>`;
-          removeBtn.title = "Remove claim";
-          removeBtn.setAttribute("aria-label", `Remove carpark ${park} claim`);
-          removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
-          parkEl.appendChild(removeBtn);
+          if (!pending) {
+            const removeBtn = document.createElement("button");
+            removeBtn.className = "danger park-remove-btn";
+            removeBtn.innerHTML = `<span class="remove-x" aria-hidden="true">×</span>`;
+            removeBtn.title = "Remove claim";
+            removeBtn.setAttribute("aria-label", `Remove carpark ${park} claim`);
+            removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
+            parkEl.appendChild(removeBtn);
+          }
         } else {
           const costsToken = dateKey !== todayKey;
-          const alreadyClaimedThisDay = user ? userUsedOnDate(bookings, dateKey, user) : false;
-          const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, bookings, user) <= 0 : true;
-          const canClaimThisCell = !isWeekend && canBookDate(date) && !!user && !alreadyClaimedThisDay && !noTokensLeft;
+          const alreadyClaimedThisDay = user ? userUsedOnDate(getDisplayedBookings(), dateKey, user) : false;
+          const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, getDisplayedBookings(), user) <= 0 : true;
+          const canClaimThisCell = !pending && !isWeekend && canBookDate(date) && !!user && !alreadyClaimedThisDay && !noTokensLeft;
 
-          parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${isToday && canClaimThisCell ? "today-available" : ""}`;
+          parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${pending ? "updating" : ""} ${isToday && canClaimThisCell ? "today-available" : ""}`;
           parkEl.innerHTML = `
             <div class="park-no">${park}</div>
-            <div class="park-state">Free</div>
+            <div class="park-state">${pending ? "Updating" : "Free"}</div>
           `;
 
           if (canClaimThisCell) {
@@ -2432,6 +2495,53 @@
       });
 
       return day;
+    }
+
+    function getCellKey(dateKey, carpark) {
+      return `${dateKey}::${carpark}`;
+    }
+
+    function setPendingCell(dateKey, carpark, pending) {
+      pendingBookingCells.set(getCellKey(dateKey, carpark), pending);
+    }
+
+    function getPendingCell(dateKey, carpark) {
+      return pendingBookingCells.get(getCellKey(dateKey, carpark));
+    }
+
+    function hasPendingCell(dateKey, carpark) {
+      return pendingBookingCells.has(getCellKey(dateKey, carpark));
+    }
+
+    function getDisplayedBookings() {
+      const displayed = cloneBookings(bookings);
+
+      pendingBookingCells.forEach((pending, key) => {
+        const [dateKey, carpark] = key.split("::");
+        if (!dateKey || !carpark) return;
+
+        if (pending.type === "claim" && pending.claim) {
+          displayed[dateKey] ??= {};
+          displayed[dateKey][carpark] = pending.claim;
+        }
+
+        if (pending.type === "remove") {
+          if (displayed[dateKey]) {
+            delete displayed[dateKey][carpark];
+            if (Object.keys(displayed[dateKey]).length === 0) delete displayed[dateKey];
+          }
+        }
+      });
+
+      return displayed;
+    }
+
+    function cloneBookings(source) {
+      return JSON.parse(JSON.stringify(source || {}));
+    }
+
+    function sameBookings(left, right) {
+      return JSON.stringify(left || {}) === JSON.stringify(right || {});
     }
 
     function updateWeekOpenTimer(weekStart, isOpen) {
