@@ -460,6 +460,20 @@
       }
     }
 
+    .day.blink-today .park {
+      animation: todayParkBlink 520ms ease-in-out 4;
+    }
+
+    @keyframes todayParkBlink {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.72);
+      }
+    }
+
     .day.weekend {
       background: var(--weekend);
       border-color: #b8c2d0;
@@ -905,7 +919,10 @@
         justify-items: center;
       }
       .top-strip .compact-card:nth-child(2) {
-        grid-column: auto;
+        grid-area: name;
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-self: stretch;
       }
       .top-strip .compact-card:nth-child(3) {
         text-align: center;
@@ -960,12 +977,17 @@
       }
       .today-note { font-size: 0.68rem; }
       .name-row {
+        width: 100%;
         grid-template-columns: minmax(130px, 44%) auto minmax(0, 1fr);
         gap: 6px;
       }
       .add-user-btn {
         padding: 8px 9px;
         font-size: 0.76rem;
+      }
+
+      #userSelect {
+        min-width: 0;
       }
       .presence-line {
         align-self: center;
@@ -988,6 +1010,12 @@
         gap: 5px;
       }
       .day.weekend { display: none; }
+      .day.weekend.mobile-today-reveal {
+        display: grid;
+        grid-column: 1 / -1;
+        width: min(170px, 100%);
+        justify-self: center;
+      }
       .day {
         width: auto;
         padding: 5px 3px;
@@ -2106,10 +2134,36 @@
       const todayEl = els.daysGrid.querySelector(".day.today");
       if (!todayEl) return;
 
+      const shouldRevealHiddenWeekend =
+        window.matchMedia("(max-width: 620px)").matches &&
+        todayEl.classList.contains("weekend");
+
+      if (shouldRevealHiddenWeekend) {
+        todayEl.classList.add("mobile-today-reveal");
+      }
+
       todayEl.classList.remove("blink-today");
       void todayEl.offsetWidth;
       todayEl.classList.add("blink-today");
       todayEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+
+      let cleanupTimer = null;
+      const cleanupBlink = () => {
+        todayEl.classList.remove("blink-today");
+        if (shouldRevealHiddenWeekend) {
+          todayEl.classList.remove("mobile-today-reveal");
+        }
+        todayEl.removeEventListener("animationend", handleBlinkEnd);
+        clearTimeout(cleanupTimer);
+      };
+
+      const handleBlinkEnd = (event) => {
+        if (event.target !== todayEl) return;
+        cleanupBlink();
+      };
+
+      todayEl.addEventListener("animationend", handleBlinkEnd);
+      cleanupTimer = setTimeout(cleanupBlink, 2400);
     }
 
     function renderStatusBox(weekStart, weekLabel, isOpen) {
