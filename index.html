@@ -2268,6 +2268,18 @@
       return `Carpark ${carpark} claimed for ${formatShortDate(date)} — ${costsToken ? "1 token used" : "no token used"}.`;
     }
 
+    async function handleRemoveClick(dateKey, carpark, claim) {
+      const selectedUser = getSelectedUser();
+      const isOwnClaim = claimBelongsToUser(claim, selectedUser);
+
+      if (isOwnClaim) {
+        await removeCarparkClaim(dateKey, carpark);
+        return;
+      }
+
+      openRemoveDialog(dateKey, carpark, claim);
+    }
+
     function openRemoveDialog(dateKey, carpark, claim) {
       const selectedUser = getSelectedUser();
       const isOwnClaim = claimBelongsToUser(claim, selectedUser);
@@ -2463,7 +2475,7 @@
             removeBtn.innerHTML = `<span class="remove-x" aria-hidden="true">×</span>`;
             removeBtn.title = "Remove claim";
             removeBtn.setAttribute("aria-label", `Remove carpark ${park} claim`);
-            removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
+            removeBtn.addEventListener("click", () => handleRemoveClick(dateKey, park, claim));
             parkEl.appendChild(removeBtn);
           }
         } else {
