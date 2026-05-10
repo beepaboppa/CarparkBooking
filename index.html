@@ -318,12 +318,17 @@
     }
 
     .booking-card {
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
       padding: 14px;
       display: grid;
+      justify-items: center;
       gap: 12px;
     }
 
     .week-nav {
+      width: 100%;
       display: grid;
       grid-template-columns: auto 1fr auto;
       gap: 10px;
@@ -394,12 +399,13 @@
 
     .days {
       display: grid;
-      grid-template-columns: repeat(7, minmax(96px, 112px));
+      grid-template-columns: repeat(7, 96px);
       gap: 9px;
-      justify-content: space-between;
+      justify-content: center;
     }
 
     .day {
+      width: 96px;
       background: #f8fafc;
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -854,7 +860,11 @@
       h1 { font-size: 1.6rem; }
       .subtitle { display: none; }
       .hero { gap: 8px; margin-bottom: 10px; }
-      .booking-card { padding: 8px; gap: 8px; }
+      .booking-card {
+        width: 100%;
+        padding: 8px;
+        gap: 8px;
+      }
       .top-strip {
         gap: 8px;
         grid-template-columns: 1fr 1fr;
@@ -948,7 +958,12 @@
         gap: 5px;
       }
       .day.weekend { display: none; }
-      .day { padding: 5px 3px; gap: 5px; border-radius: 10px; }
+      .day {
+        width: auto;
+        padding: 5px 3px;
+        gap: 5px;
+        border-radius: 10px;
+      }
       .day-name { font-size: 0.72rem; }
       .date { font-size: 0.72rem; }
       .day-name-full { display: none; }
