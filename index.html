@@ -556,21 +556,10 @@
     }
 
     .park.available.bookable {
-      background: var(--green-light);
-      border-color: rgba(34, 197, 94, 0.35);
+      background: linear-gradient(135deg, #15803d, #166534);
+      border-color: #14532d;
       cursor: pointer;
       color: #ffffff;
-    }
-
-    .park.available.bookable::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(135deg, #15803d, #166534);
-      border: 1px solid #14532d;
-      z-index: 0;
-      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, opacity 150ms ease;
     }
 
     .park.available.bookable .park-no,
@@ -581,9 +570,6 @@
     .park.available.bookable:hover {
       transform: translateY(-3px) scale(1.04);
       box-shadow: 0 12px 24px rgba(21, 128, 61, 0.22);
-    }
-
-    .park.available.bookable:hover::before {
       background: linear-gradient(135deg, #166534, #14532d);
     }
 
@@ -592,20 +578,41 @@
       box-shadow: 0 5px 12px rgba(21, 128, 61, 0.18);
     }
 
-    .park.available.bookable.claim-pop {
+    .park.claiming {
       pointer-events: none;
-      background: var(--green-light);
-      border-color: rgba(34, 197, 94, 0.35);
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
       transform: scale(1);
     }
 
-    .park.available.bookable.claim-pop::before {
-      animation: carparkClaimPop 360ms cubic-bezier(0.18, 0.9, 0.22, 1) forwards;
+    .claim-pop-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      border-radius: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 6px;
+      text-align: center;
+      background: linear-gradient(135deg, #15803d, #166534);
+      border: 1px solid #14532d;
+      color: #ffffff;
+      animation: carparkClaimPop 420ms cubic-bezier(0.15, 0.92, 0.18, 1) forwards;
+      transform-origin: center;
     }
 
-    .park.available.bookable.claim-pop .park-no,
-    .park.available.bookable.claim-pop .park-state {
-      animation: carparkClaimText 220ms ease forwards;
+    .claim-pop-layer .park-no,
+    .claim-pop-layer .park-state {
+      color: inherit;
+    }
+
+    .claim-pop-layer.gold-pop {
+      background: linear-gradient(135deg, #fde68a, var(--gold));
+      border-color: rgba(251, 191, 36, 0.75);
+      color: var(--text);
     }
 
     @keyframes carparkClaimPop {
@@ -614,38 +621,22 @@
         transform: scale(1);
         box-shadow: 0 5px 12px rgba(21, 128, 61, 0.18);
       }
-      48% {
+      42% {
         opacity: 1;
-        transform: scale(1.18);
-        box-shadow: 0 16px 30px rgba(21, 128, 61, 0.30);
+        transform: scale(1.15);
+        box-shadow: 0 16px 30px rgba(21, 128, 61, 0.26);
       }
       100% {
         opacity: 0;
-        transform: scale(1.28);
+        transform: scale(1.32);
         box-shadow: 0 20px 36px rgba(21, 128, 61, 0);
       }
     }
 
-    @keyframes carparkClaimText {
-      0% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      100% {
-        opacity: 0;
-        transform: scale(0.92);
-      }
-    }
-
     .park.available.today-available {
-      background: var(--green-light);
-      border-color: rgba(251, 191, 36, 0.75);
-      color: var(--text);
-    }
-
-    .park.available.today-available::before {
       background: linear-gradient(135deg, #fde68a, var(--gold));
       border-color: rgba(251, 191, 36, 0.75);
+      color: var(--text);
     }
 
     .park.available.today-available .park-no,
@@ -655,11 +646,8 @@
 
     .park.available.today-available:hover {
       transform: translateY(-3px) scale(1.04);
-      box-shadow: 0 12px 24px rgba(251, 191, 36, 0.28);
-    }
-
-    .park.available.today-available:hover::before {
       background: linear-gradient(135deg, #fde68a, #f59e0b);
+      box-shadow: 0 12px 24px rgba(251, 191, 36, 0.28);
     }
 
     .park.available.today-available:active {
@@ -671,12 +659,6 @@
       background: var(--green-light);
       opacity: 1;
       cursor: default;
-    }
-
-    .park.available.disabled::before,
-    .park.taken::before,
-    .day.weekend .park::before {
-      content: none;
     }
 
     .park[role="button"]:focus-visible {
@@ -2015,23 +1997,40 @@
         bookings = updatedBookings;
         render();
         showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
+        return true;
       } catch (error) {
         showToast(error.message || "Could not claim carpark.");
+        return false;
       }
     }
 
     async function animateAndClaimCarpark(parkEl, dateKey, carpark) {
-      if (!parkEl || parkEl.classList.contains("claim-pop")) return;
+      if (!parkEl || parkEl.classList.contains("claiming")) return;
 
-      parkEl.classList.remove("claim-pop");
-      void parkEl.offsetWidth;
-      parkEl.classList.add("claim-pop");
+      const user = getSelectedUser();
+      const originalClassName = parkEl.className;
+      const originalHtml = parkEl.innerHTML;
+      const wasTodayAvailable = parkEl.classList.contains("today-available");
+      const displayName = user?.name || "You";
 
-      await delay(360);
-      await claimCarpark(dateKey, carpark);
+      parkEl.className = "park taken claiming";
+      parkEl.innerHTML = `
+        <div class="park-no">${escapeHtml(carpark)}</div>
+        <div class="taken-row">
+          <span class="park-state taken-name">${escapeHtml(displayName)}</span>
+        </div>
+        <div class="claim-pop-layer ${wasTodayAvailable ? "gold-pop" : ""}" aria-hidden="true">
+          <div class="park-no">${escapeHtml(carpark)}</div>
+          <div class="park-state">Free</div>
+        </div>
+      `;
 
-      if (parkEl.isConnected) {
-        parkEl.classList.remove("claim-pop");
+      await delay(180);
+      const claimed = await claimCarpark(dateKey, carpark);
+
+      if (!claimed && parkEl.isConnected) {
+        parkEl.className = originalClassName;
+        parkEl.innerHTML = originalHtml;
       }
     }
 
