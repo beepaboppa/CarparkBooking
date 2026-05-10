@@ -19,7 +19,7 @@
       --weekend-inner: #c8d1de;
       --shadow: 0 12px 34px rgba(15, 23, 42, 0.07);
       --radius: 16px;
-      --calendar-column: 96px;
+      --calendar-column: 112px;
       --calendar-gap: 9px;
       --calendar-pad: 14px;
       --calendar-outer-width: calc((var(--calendar-column) * 7) + (var(--calendar-gap) * 6) + (var(--calendar-pad) * 2));
@@ -82,9 +82,24 @@
       width: min(var(--calendar-outer-width), 100%);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 170px 1fr 150px;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "status allowance"
+        "name name";
       gap: 12px;
       align-items: stretch;
+    }
+
+    .top-strip .compact-card:nth-child(1) {
+      grid-area: status;
+    }
+
+    .top-strip .compact-card:nth-child(2) {
+      grid-area: name;
+    }
+
+    .top-strip .compact-card:nth-child(3) {
+      grid-area: allowance;
     }
 
     .panel {
@@ -186,7 +201,7 @@
 
     .name-row {
       display: grid;
-      grid-template-columns: minmax(150px, 220px) auto 1fr;
+      grid-template-columns: minmax(190px, 280px) auto minmax(0, 1fr);
       gap: 10px;
       align-items: center;
     }
@@ -452,6 +467,7 @@
     }
 
     .day-head {
+      width: 100%;
       display: grid;
       gap: 2px;
       justify-items: center;
@@ -459,9 +475,15 @@
     }
 
     .day-name {
+      width: 100%;
+      max-width: 100%;
       font-weight: 900;
-      font-size: 1rem;
+      font-size: 0.96rem;
+      letter-spacing: -0.035em;
       color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
     }
 
     .day-name-short { display: none; }
@@ -843,7 +865,6 @@
     @media (max-width: 860px) {
       .top-strip {
         width: 100%;
-        grid-template-columns: 1fr;
       }
     }
 
@@ -875,18 +896,20 @@
       .top-strip {
         gap: 8px;
         grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "status allowance"
+          "name name";
       }
       .top-strip .compact-card:nth-child(1) {
-        order: 2;
         text-align: center;
         justify-items: center;
       }
       .top-strip .compact-card:nth-child(2) {
-        order: 1;
-        grid-column: 1 / -1;
+        grid-column: auto;
       }
       .top-strip .compact-card:nth-child(3) {
-        order: 3;
+        text-align: center;
+        justify-items: center;
       }
       .allowance-week { display: none; }
       .token { font-size: 0.92rem; }
@@ -937,7 +960,7 @@
       }
       .today-note { font-size: 0.68rem; }
       .name-row {
-        grid-template-columns: minmax(120px, 42%) auto 1fr;
+        grid-template-columns: minmax(130px, 44%) auto minmax(0, 1fr);
         gap: 6px;
       }
       .add-user-btn {
