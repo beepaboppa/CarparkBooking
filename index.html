@@ -216,14 +216,43 @@
     }
 
     .presence-line {
-      color: #0000FF;
-      font-size: 0.85rem;
-      line-height: 1.3;
-      word-break: break-word;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
       margin: 0;
-      white-space: nowrap;
+      min-width: 0;
+      font-size: 0.84rem;
+      line-height: 1.2;
       font-weight: 900;
     }
+
+    .presence-label {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .presence-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 5px 10px;
+      min-height: 30px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      white-space: nowrap;
+    }
+
+    .presence-color-0 { color: #2563eb; }
+    .presence-color-1 { color: #16a34a; }
+    .presence-color-2 { color: #9333ea; }
+    .presence-color-3 { color: #ea580c; }
+    .presence-color-4 { color: #db2777; }
+    .presence-color-5 { color: #0891b2; }
+    .presence-color-6 { color: #ca8a04; }
+    .presence-color-7 { color: #dc2626; }
 
     .allowance-week {
       display: none;
@@ -413,20 +442,22 @@
     }
 
     .park {
-      width: 100%;
-      aspect-ratio: 1;
+      width: 68px;
+      height: 68px;
+      justify-self: center;
+      position: relative;
       border-radius: 999px;
-      padding: 10px 8px;
+      padding: 6px;
       border: 1px solid #dbe2ea;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 2px;
       text-align: center;
       background: #fff;
       transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .park.available {
@@ -492,26 +523,26 @@
 
     .park-no {
       font-weight: 900;
-      font-size: 1.2rem;
+      font-size: 1.02rem;
       line-height: 1;
       color: var(--text);
     }
 
     .park-state {
       color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.2;
-      font-weight: 800;
+      font-size: 0.66rem;
+      line-height: 1.05;
+      font-weight: 900;
       word-break: break-word;
-      max-width: 90%;
+      max-width: 86%;
     }
 
     .park-state.taken-name {
       color: var(--text);
-      font-size: 0.84rem;
+      font-size: 0.62rem;
       font-weight: 900;
-      line-height: 1.15;
-      max-width: 90%;
+      line-height: 1.05;
+      max-width: 86%;
     }
 
     .taken-row {
@@ -519,14 +550,24 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
       width: 100%;
     }
 
     .taken-row button {
-      padding: 4px 8px;
-      font-size: 0.68rem;
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.82rem;
       line-height: 1;
+      border-radius: 999px;
+      box-shadow: 0 4px 10px rgba(239, 68, 68, 0.22);
     }
 
     dialog {
@@ -867,10 +908,16 @@
         font-size: 0.76rem;
       }
       .presence-line {
-        white-space: normal;
-        color: #0000FF;
-        font-weight: 900;
         align-self: center;
+        gap: 4px;
+      }
+      .presence-label {
+        display: none;
+      }
+      .presence-chip {
+        padding: 4px 7px;
+        min-height: 24px;
+        font-size: 0.72rem;
       }
       .allowance-card {
         align-content: center;
@@ -882,12 +929,24 @@
       .date { font-size: 0.72rem; }
       .day-name-full { display: none; }
       .day-name-short { display: inline; }
-      .park { padding: 6px 3px; gap: 2px; }
+      .park {
+        width: 46px;
+        height: 46px;
+        padding: 4px 2px;
+        gap: 1px;
+      }
       .park-word { display: none; }
-      .park-no { font-size: 0.9rem; }
+      .park-no { font-size: 0.76rem; }
       .park-state,
-      .park-state.taken-name { font-size: 0.66rem; }
-      .taken-row { gap: 4px; }
+      .park-state.taken-name { font-size: 0.5rem; }
+      .taken-row button {
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+        top: -4px;
+        right: -4px;
+        font-size: 0.7rem;
+      }
       #prevWeekBtn,
       #nextWeekBtn {
         width: 100%;
@@ -1827,9 +1886,17 @@
 
     function renderPresence(onlineUsers) {
       const names = [...new Set(onlineUsers.map(user => user.name).filter(Boolean))];
-      els.presenceLine.textContent = names.length
-        ? `Online now: ${names.join(", ")}`
-        : "Shared mode";
+
+      if (!names.length) {
+        els.presenceLine.textContent = "Shared mode";
+        return;
+      }
+
+      els.presenceLine.innerHTML =
+        `<span class="presence-label">Online</span>` +
+        names
+          .map((name, index) => `<span class="presence-chip presence-color-${index % 8}">${escapeHtml(name)}</span>`)
+          .join("");
     }
 
     function presenceKey(value) {
@@ -2009,7 +2076,9 @@
           const takenRow = parkEl.querySelector(".taken-row");
           const removeBtn = document.createElement("button");
           removeBtn.className = "danger";
-          removeBtn.textContent = "Remove";
+          removeBtn.textContent = "×";
+          removeBtn.title = "Remove claim";
+          removeBtn.setAttribute("aria-label", `Remove carpark ${park} claim`);
           removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
           takenRow.appendChild(removeBtn);
         } else {
