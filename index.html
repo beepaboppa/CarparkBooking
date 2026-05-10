@@ -60,6 +60,8 @@
 
     .title-block {
       display: grid;
+      justify-items: center;
+      text-align: center;
       gap: 4px;
     }
 
@@ -71,11 +73,12 @@
     }
 
     .subtitle {
-      margin: 0;
+      margin: 0 auto;
       color: var(--muted);
       font-size: 0.96rem;
       line-height: 1.4;
       max-width: 720px;
+      text-align: center;
     }
 
     .top-strip {
@@ -165,10 +168,13 @@
     }
 
     .week-open-timer {
+      display: inline-flex;
+      align-items: center;
       color: var(--muted);
       font-size: 0.82rem;
       font-weight: 900;
       line-height: 1.2;
+      white-space: nowrap;
     }
 
     label {
@@ -590,7 +596,7 @@
 
     .park-no {
       font-weight: 900;
-      font-size: 1.12rem;
+      font-size: 1.32rem;
       line-height: 1;
       color: var(--text);
     }
@@ -599,7 +605,7 @@
       color: var(--muted);
       font-size: 0.72rem;
       line-height: 1.05;
-      font-weight: 900;
+      font-weight: 400;
       word-break: break-word;
       max-width: 86%;
     }
@@ -1033,9 +1039,9 @@
         gap: 1px;
       }
       .park-word { display: none; }
-      .park-no { font-size: 0.86rem; }
-      .park-state,
-      .park-state.taken-name { font-size: 0.56rem; }
+      .park-no { font-size: 1rem; }
+      .park-state { font-size: 0.56rem; font-weight: 400; }
+      .park-state.taken-name { font-size: 0.56rem; font-weight: 900; }
       .taken-row button {
         width: 16px;
         height: 16px;
@@ -1259,7 +1265,6 @@
       <form id="bugForm" class="bug-form">
         <div>
           <p class="small-label">Report bug</p>
-          <p class="modal-copy">Reports are saved to Firebase and can only be added from this screen.</p>
         </div>
 
         <div class="bug-form-row">
@@ -2172,8 +2177,8 @@
         <div class="status-line">
           <span>${weekLabel}:</span>
           <span class="status-badge ${isOpen ? "open" : "closed"}">${isOpen ? "Open" : "Closed"}</span>
+          ${showTimer ? `<span id="weekOpenTimer" class="week-open-timer"></span>` : ""}
         </div>
-        ${showTimer ? `<div id="weekOpenTimer" class="week-open-timer"></div>` : ""}
       `;
 
       updateWeekOpenTimer(weekStart, isOpen);
