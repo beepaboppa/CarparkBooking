@@ -413,15 +413,20 @@
     }
 
     .park {
-      border-radius: 12px;
-      padding: 12px 8px;
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 999px;
+      padding: 10px 8px;
       border: 1px solid #dbe2ea;
-      display: grid;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       gap: 4px;
-      justify-items: center;
       text-align: center;
       background: #fff;
       transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      overflow: hidden;
     }
 
     .park.available {
@@ -486,36 +491,42 @@
     }
 
     .park-no {
-      font-weight: 500;
-      font-size: 1.04rem;
+      font-weight: 900;
+      font-size: 1.2rem;
+      line-height: 1;
       color: var(--text);
     }
 
     .park-state {
       color: var(--muted);
-      font-size: 1.04rem;
+      font-size: 0.88rem;
       line-height: 1.2;
       font-weight: 800;
+      word-break: break-word;
+      max-width: 90%;
     }
 
     .park-state.taken-name {
       color: var(--text);
-      font-size: 1.04rem;
+      font-size: 0.84rem;
       font-weight: 900;
-      line-height: 1.2;
+      line-height: 1.15;
+      max-width: 90%;
     }
 
     .taken-row {
-      display: inline-flex;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
     }
 
     .taken-row button {
-      padding: 5px 10px;
-      font-size: 0.82rem;
+      padding: 4px 8px;
+      font-size: 0.68rem;
+      line-height: 1;
     }
 
     dialog {
@@ -703,29 +714,25 @@
     }
 
     .bug-group {
-      display: grid;
-      gap: 7px;
+      display: contents;
     }
 
     .bug-group-name {
-      margin: 0;
-      color: var(--text);
-      font-size: 0.9rem;
-      font-weight: 900;
+      display: none;
     }
 
     .bug-item {
       border: 1px solid var(--line);
       border-radius: 14px;
       background: #f8fafc;
-      padding: 10px 12px;
+      padding: 12px 14px;
       display: grid;
-      gap: 4px;
+      gap: 6px;
     }
 
     .bug-item-title {
       margin: 0;
-      font-size: 0.98rem;
+      font-size: 1rem;
       font-weight: 900;
       color: var(--text);
       line-height: 1.2;
@@ -875,11 +882,11 @@
       .date { font-size: 0.72rem; }
       .day-name-full { display: none; }
       .day-name-short { display: inline; }
-      .park { padding: 7px 2px; gap: 1px; border-radius: 8px; }
+      .park { padding: 6px 3px; gap: 2px; }
       .park-word { display: none; }
-      .park-no { font-size: 0.82rem; }
+      .park-no { font-size: 0.9rem; }
       .park-state,
-      .park-state.taken-name { font-size: 0.78rem; }
+      .park-state.taken-name { font-size: 0.66rem; }
       .taken-row { gap: 4px; }
       #prevWeekBtn,
       #nextWeekBtn {
@@ -1648,29 +1655,20 @@
         return;
       }
 
-      const grouped = new Map();
-      bugReports.forEach((report) => {
-        const name = report.reporterName || "Unknown";
-        if (!grouped.has(name)) grouped.set(name, []);
-        grouped.get(name).push(report);
-      });
-
-      els.bugList.innerHTML = [...grouped.entries()]
-        .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
-        .map(([name, reports]) => `
-          <section class="bug-group">
-            <h3 class="bug-group-name">${escapeHtml(name)}</h3>
-            ${reports
-              .sort((a, b) => getBugTime(b) - getBugTime(a))
-              .map(report => `
-                <article class="bug-item">
-                  <p class="bug-item-title">${escapeHtml(report.title || "Untitled bug")}</p>
-                  ${report.details ? `<p class="bug-item-details">${escapeHtml(report.details)}</p>` : ""}
-                  <p class="bug-item-meta">${escapeHtml(formatBugDate(report))}</p>
-                </article>
-              `).join("")}
-          </section>
-        `).join("");
+      els.bugList.innerHTML = bugReports
+        .slice()
+        .sort((a, b) => getBugTime(b) - getBugTime(a))
+        .map(report => {
+          const reporter = report.reporterName || "Unknown";
+          const title = report.title || "Untitled bug";
+          return `
+            <article class="bug-item">
+              <p class="bug-item-title">${escapeHtml(`${reporter} - ${title}`)}</p>
+              ${report.details ? `<p class="bug-item-details">${escapeHtml(report.details)}</p>` : ""}
+              <p class="bug-item-meta">${escapeHtml(formatBugDate(report))}</p>
+            </article>
+          `;
+        }).join("");
     }
 
     function getBugTime(report) {
@@ -2002,7 +2000,7 @@
         if (claim) {
           parkEl.className = "park taken";
           parkEl.innerHTML = `
-            <div class="park-no"><span class="park-word">Carpark </span>${park}</div>
+            <div class="park-no">${park}</div>
             <div class="taken-row">
               <span class="park-state taken-name">${escapeHtml(getClaimDisplayName(claim))}</span>
             </div>
@@ -2022,7 +2020,7 @@
 
           parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${isToday && canClaimThisCell ? "today-available" : ""}`;
           parkEl.innerHTML = `
-            <div class="park-no"><span class="park-word">Carpark </span>${park}</div>
+            <div class="park-no">${park}</div>
             <div class="park-state">Free</div>
           `;
 
