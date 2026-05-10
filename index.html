@@ -394,17 +394,19 @@
 
     .days {
       display: grid;
-      grid-template-columns: repeat(7, minmax(120px, 1fr));
+      grid-template-columns: repeat(7, minmax(96px, 112px));
       gap: 9px;
+      justify-content: space-between;
     }
 
     .day {
       background: #f8fafc;
       border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 9px;
+      padding: 8px 6px;
       display: grid;
       align-content: start;
+      justify-items: center;
       gap: 8px;
       text-align: center;
     }
@@ -412,6 +414,23 @@
     .day.today {
       border-color: rgba(251, 191, 36, 0.9);
       box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16) inset;
+    }
+
+    .day.blink-today {
+      animation: todayBlink 520ms ease-in-out 4;
+    }
+
+    @keyframes todayBlink {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16) inset;
+      }
+      50% {
+        transform: scale(1.025);
+        box-shadow:
+          0 0 0 3px rgba(251, 191, 36, 0.65),
+          0 12px 28px rgba(251, 191, 36, 0.22);
+      }
     }
 
     .day.weekend {
@@ -818,6 +837,7 @@
     @media (max-width: 980px) {
       .days {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
       }
 
       .week-nav {
@@ -922,7 +942,11 @@
       .allowance-card {
         align-content: center;
       }
-      .days { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+      .days {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        justify-content: stretch;
+        gap: 5px;
+      }
       .day.weekend { display: none; }
       .day { padding: 5px 3px; gap: 5px; border-radius: 10px; }
       .day-name { font-size: 0.72rem; }
@@ -1011,7 +1035,7 @@
             <div id="weekRange" class="week-range"></div>
             <div id="weekContext" class="week-context"></div>
           </div>
-          <button id="jumpThisWeekBtn" class="ghost jump-btn">Jump to This Week</button>
+          <button id="jumpThisWeekBtn" class="ghost jump-btn">Jump to Today</button>
         </div>
 
         <button id="nextWeekBtn" class="ghost">Next Week →</button>
@@ -1282,6 +1306,7 @@
     let unsubscribePresence = null;
     let currentPresenceRef = null;
     let weekTimerInterval = null;
+    let blinkTodayAfterRender = false;
 
     init();
 
@@ -1524,6 +1549,7 @@
 
       els.jumpThisWeekBtn.addEventListener("click", () => {
         weekOffset = 0;
+        blinkTodayAfterRender = true;
         render();
       });
 
@@ -2007,7 +2033,7 @@
 
       els.weekRange.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
       els.weekContext.textContent = weekOffset === 0 ? "This week" : weekLabel;
-      els.jumpThisWeekBtn.disabled = weekOffset === 0;
+      els.jumpThisWeekBtn.disabled = false;
 
       renderStatusBox(weekStart, weekLabel, isOpen);
 
@@ -2024,6 +2050,21 @@
         const date = addDays(weekStart, index);
         els.daysGrid.appendChild(renderDay(date));
       }
+
+      blinkTodayIfRequested();
+    }
+
+    function blinkTodayIfRequested() {
+      if (!blinkTodayAfterRender) return;
+
+      blinkTodayAfterRender = false;
+      const todayEl = els.daysGrid.querySelector(".day.today");
+      if (!todayEl) return;
+
+      todayEl.classList.remove("blink-today");
+      void todayEl.offsetWidth;
+      todayEl.classList.add("blink-today");
+      todayEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     }
 
     function renderStatusBox(weekStart, weekLabel, isOpen) {
