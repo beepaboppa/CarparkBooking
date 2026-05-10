@@ -158,12 +158,14 @@
 
     select,
     input,
+    textarea,
     button {
       font: inherit;
     }
 
     select,
-    input {
+    input,
+    textarea {
       width: 100%;
       border-radius: 12px;
       border: 1px solid var(--line);
@@ -193,6 +195,18 @@
       color: #b91c1c;
       font-size: 0.86rem;
       font-weight: 800;
+      margin: 0;
+      min-height: 1.1em;
+    }
+
+    .auth-view.hidden {
+      display: none;
+    }
+
+    .auth-status {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 900;
       margin: 0;
       min-height: 1.1em;
     }
@@ -597,7 +611,7 @@
     .toast {
       position: fixed;
       right: 18px;
-      bottom: 18px;
+      bottom: 70px;
       max-width: 380px;
       padding: 12px 14px;
       border-radius: 14px;
@@ -616,6 +630,136 @@
       transform: translateY(0);
       opacity: 1;
     }
+
+
+
+    textarea {
+      min-height: 118px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .bug-fab {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 24;
+      background: #0f172a;
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .bug-sidebar-shell {
+      position: fixed;
+      inset: 0;
+      display: none;
+      justify-content: flex-end;
+      background: rgba(15, 23, 42, 0.28);
+      z-index: 28;
+    }
+
+    .bug-sidebar-shell.visible {
+      display: flex;
+    }
+
+    .bug-sidebar {
+      width: min(460px, calc(100vw - 22px));
+      height: 100%;
+      background: #fff;
+      border-left: 1px solid var(--line);
+      box-shadow: -14px 0 34px rgba(15, 23, 42, 0.15);
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .bug-sidebar-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .bug-sidebar-title {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .bug-close-btn {
+      padding: 6px 10px;
+      border-radius: 10px;
+    }
+
+    .bug-list {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .bug-group {
+      display: grid;
+      gap: 7px;
+    }
+
+    .bug-group-name {
+      margin: 0;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 900;
+    }
+
+    .bug-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #f8fafc;
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .bug-item-title {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .bug-item-details {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    .bug-item-meta,
+    .bug-empty {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .bug-form {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .bug-form-row {
+      display: grid;
+      gap: 5px;
+    }
+
 
     @media (max-width: 1180px) {
       .top-strip {
@@ -748,6 +892,16 @@
         font-size: 0.86rem;
       }
       .taken-row button { padding: 3px 5px; font-size: 0.58rem; }
+      .bug-fab {
+        right: 10px;
+        bottom: 10px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+      }
+      .bug-sidebar {
+        width: 100%;
+        padding: 12px;
+      }
     }
   </style>
 </head>
@@ -811,20 +965,32 @@
 
   <section id="authGate" class="name-gate visible" aria-modal="true" role="dialog">
     <div class="name-gate-card">
-      <div>
-        <p class="small-label">Private access</p>
-        <h2 class="name-gate-title">Enter access PIN</h2>
+      <div id="authValidationView" class="auth-view">
+        <div>
+          <p class="small-label">Private access</p>
+          <h2 class="name-gate-title">Validating authentication</h2>
+        </div>
+
+        <p class="modal-copy">Checking whether this browser is already signed in.</p>
+        <p id="authStatusText" class="auth-status">Checking saved login...</p>
       </div>
 
-      <p class="modal-copy">Enter the shared internal PIN/password. This is checked by Firebase Authentication and is not stored in this HTML file.</p>
+      <div id="authLoginView" class="auth-view hidden">
+        <div>
+          <p class="small-label">Private access</p>
+          <h2 class="name-gate-title">Enter access PIN</h2>
+        </div>
 
-      <div>
-        <label for="pinInput">PIN / password</label>
-        <input id="pinInput" type="password" autocomplete="current-password" />
+        <p class="modal-copy">Enter the shared internal PIN/password. This is checked by Firebase Authentication and is not stored in this HTML file.</p>
+
+        <div>
+          <label for="pinInput">PIN / password</label>
+          <input id="pinInput" type="password" autocomplete="current-password" />
+        </div>
+
+        <p id="pinError" class="gate-error"></p>
+        <button id="unlockBtn" class="primary">Unlock</button>
       </div>
-
-      <p id="pinError" class="gate-error"></p>
-      <button id="unlockBtn" class="primary">Unlock</button>
     </div>
   </section>
 
@@ -909,9 +1075,56 @@
     </form>
   </dialog>
 
+
+
+  <button id="bugOpenBtn" class="bug-fab" type="button">Report bug</button>
+
+  <section id="bugSidebarShell" class="bug-sidebar-shell" aria-modal="true" role="dialog" aria-labelledby="bugSidebarTitle">
+    <aside class="bug-sidebar">
+      <div class="bug-sidebar-header">
+        <div>
+          <p class="small-label">Add-only log</p>
+          <h2 id="bugSidebarTitle" class="bug-sidebar-title">Reported bugs</h2>
+        </div>
+        <button id="bugCloseBtn" class="ghost bug-close-btn" type="button">Close</button>
+      </div>
+
+      <div id="bugList" class="bug-list">
+        <p class="bug-empty">Loading bug reports...</p>
+      </div>
+
+      <form id="bugForm" class="bug-form">
+        <div>
+          <p class="small-label">Report bug</p>
+          <p class="modal-copy">Reports are saved to Firebase and can only be added from this screen.</p>
+        </div>
+
+        <div class="bug-form-row">
+          <label for="bugTitleInput">Bug summary</label>
+          <input id="bugTitleInput" type="text" maxlength="100" autocomplete="off" placeholder="Example: Cannot claim carpark on mobile" />
+        </div>
+
+        <div class="bug-form-row">
+          <label for="bugDetailsInput">Details</label>
+          <textarea id="bugDetailsInput" maxlength="900" placeholder="What happened, what you expected, and any steps to repeat it"></textarea>
+        </div>
+
+        <p id="bugError" class="gate-error"></p>
+        <button id="bugSubmitBtn" class="primary" type="submit">Add bug report</button>
+      </form>
+    </aside>
+  </section>
+
+
   <div id="toast" class="toast"></div>
 
   <script type="module">
+    /************************************************************
+     * EDITABLE APP / FIREBASE SETTINGS
+     * Keep future Firebase, login, carpark and token edits here.
+     ************************************************************/
+    const FIREBASE_SDK_VERSION = "10.12.5";
+
     const firebaseConfig = {
       apiKey: "AIzaSyDzFhhlF2UmbKnyIe4Vr9kj93BKnJK7qtI",
       authDomain: "carpark-booking-583cc.firebaseapp.com",
@@ -926,18 +1139,25 @@
     // The shared PIN/password is NOT stored here. Users type it into the unlock screen.
     const SHARED_LOGIN_EMAIL = "carpark@email.com";
 
-    let USERS = [];
-    let usersById = new Map();
-
     const CARPARKS = ["64", "65", "126"];
+    const DEFAULT_WEEKLY_TOKENS = 1;
     const USER_COOKIE = "carpark_selected_user_id_v5";
     const USER_STORAGE_KEY = "carpark_selected_user_id_v5";
     const BROWSER_ID_KEY = "carpark_browser_id_v1";
-    const DEFAULT_WEEKLY_TOKENS = 1;
+    const BUG_REPORTS_COLLECTION = "bugReports";
+
+    /************************************************************
+     * APP STATE
+     ************************************************************/
+    let USERS = [];
+    let usersById = new Map();
 
     const els = {
       app: document.querySelector("#app"),
       authGate: document.querySelector("#authGate"),
+      authValidationView: document.querySelector("#authValidationView"),
+      authLoginView: document.querySelector("#authLoginView"),
+      authStatusText: document.querySelector("#authStatusText"),
       pinInput: document.querySelector("#pinInput"),
       pinError: document.querySelector("#pinError"),
       unlockBtn: document.querySelector("#unlockBtn"),
@@ -969,11 +1189,21 @@
       removeDialogText: document.querySelector("#removeDialogText"),
       removeWarningText: document.querySelector("#removeWarningText"),
       confirmRemoveBtn: document.querySelector("#confirmRemoveBtn"),
+      bugOpenBtn: document.querySelector("#bugOpenBtn"),
+      bugSidebarShell: document.querySelector("#bugSidebarShell"),
+      bugCloseBtn: document.querySelector("#bugCloseBtn"),
+      bugList: document.querySelector("#bugList"),
+      bugForm: document.querySelector("#bugForm"),
+      bugTitleInput: document.querySelector("#bugTitleInput"),
+      bugDetailsInput: document.querySelector("#bugDetailsInput"),
+      bugError: document.querySelector("#bugError"),
+      bugSubmitBtn: document.querySelector("#bugSubmitBtn"),
       daysGrid: document.querySelector("#daysGrid"),
       toast: document.querySelector("#toast")
     };
 
     let bookings = {};
+    let bugReports = [];
     let weekOffset = 0;
     let pendingRemoval = null;
     let usingFirebase = false;
@@ -982,6 +1212,7 @@
     let firestoreApi = null;
     let realtimeApi = null;
     let unsubscribeBookings = null;
+    let unsubscribeBugReports = null;
     let unsubscribePresence = null;
     let currentPresenceRef = null;
     let weekTimerInterval = null;
@@ -990,11 +1221,15 @@
 
     async function init() {
       wireEvents();
+      openAuthGate("validating");
       await setupFirebase();
 
       if (!usingFirebase || !authApi) {
+        els.authStatusText.textContent = "Firebase could not load.";
         els.pinError.textContent = "Firebase could not load. Check your Firebase config and internet connection.";
+        els.unlockBtn.disabled = true;
         els.presenceLine.textContent = "Locked";
+        openAuthGate("login");
         return;
       }
 
@@ -1004,7 +1239,7 @@
           await finishUnlock();
         } else {
           isAuthenticated = false;
-          await lockApp();
+          await lockApp({ authMode: "login" });
         }
       });
     }
@@ -1014,14 +1249,14 @@
       if (!hasFirebaseConfig) return;
 
       try {
-        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+        const { initializeApp } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`);
         const {
           getAuth,
           signInWithEmailAndPassword,
           onAuthStateChanged,
           setPersistence,
           browserLocalPersistence
-        } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
+        } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-auth.js`);
         const {
           getFirestore,
           doc,
@@ -1029,8 +1264,10 @@
           getDocs,
           onSnapshot,
           setDoc,
-          runTransaction
-        } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+          addDoc,
+          runTransaction,
+          serverTimestamp: firestoreServerTimestamp
+        } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`);
         const {
           getDatabase,
           ref,
@@ -1039,7 +1276,7 @@
           onDisconnect,
           serverTimestamp,
           remove
-        } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
+        } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-database.js`);
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -1058,7 +1295,9 @@
           getDocs,
           onSnapshot,
           setDoc,
-          runTransaction
+          addDoc,
+          runTransaction,
+          serverTimestamp: firestoreServerTimestamp
         };
 
         realtimeApi = {
@@ -1107,11 +1346,12 @@
       populateUserSelects();
       loadUserFromSavedSelection();
       await loadBookings();
+      await loadBugReports();
       startPresence();
       render();
     }
 
-    async function lockApp() {
+    async function lockApp({ authMode = "login" } = {}) {
       await clearCurrentPresence();
       unsubscribeBookings?.();
       unsubscribePresence?.();
@@ -1124,7 +1364,7 @@
       els.presenceLine.textContent = "Locked";
       els.tokenText.textContent = "Locked";
       els.daysGrid.innerHTML = "";
-      openAuthGate();
+      openAuthGate(authMode);
     }
 
     async function loadUsers() {
@@ -1222,6 +1462,15 @@
       });
 
       els.freeTodayBtn.addEventListener("click", openFreeTodayDialog);
+      els.bugOpenBtn.addEventListener("click", openBugSidebar);
+      els.bugCloseBtn.addEventListener("click", closeBugSidebar);
+      els.bugSidebarShell.addEventListener("click", (event) => {
+        if (event.target === els.bugSidebarShell) closeBugSidebar();
+      });
+      els.bugForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await addBugReport();
+      });
 
       els.confirmFreeBtn.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -1303,6 +1552,144 @@
         showToast("Live booking updates could not connect.");
       });
     }
+
+
+
+    async function loadBugReports() {
+      const reportsRef = firestoreApi.collection(firestoreApi.db, BUG_REPORTS_COLLECTION);
+      unsubscribeBugReports?.();
+
+      unsubscribeBugReports = firestoreApi.onSnapshot(reportsRef, (snap) => {
+        bugReports = snap.docs
+          .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+          .sort((a, b) => getBugTime(b) - getBugTime(a));
+        renderBugReports();
+      }, (error) => {
+        console.error(error);
+        els.bugList.innerHTML = `<p class="bug-empty">Bug reports could not load. Check Firestore rules.</p>`;
+      });
+    }
+
+    async function addBugReport() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      const user = getSelectedUser();
+      if (!user) {
+        openNameGate();
+        showToast("Select your name first.");
+        return;
+      }
+
+      const title = els.bugTitleInput.value.trim();
+      const details = els.bugDetailsInput.value.trim();
+
+      if (!title) {
+        els.bugError.textContent = "Enter a bug summary.";
+        return;
+      }
+
+      els.bugSubmitBtn.disabled = true;
+      els.bugError.textContent = "Saving...";
+
+      try {
+        await firestoreApi.addDoc(firestoreApi.collection(firestoreApi.db, BUG_REPORTS_COLLECTION), {
+          reporterName: user.name,
+          reporterUserId: user.id,
+          title,
+          details,
+          status: "open",
+          createdAt: firestoreApi.serverTimestamp(),
+          createdAtLocal: new Date().toISOString(),
+          page: location.pathname || "carpark-booking"
+        });
+
+        els.bugTitleInput.value = "";
+        els.bugDetailsInput.value = "";
+        els.bugError.textContent = "";
+        showToast("Bug report added.");
+      } catch (error) {
+        console.error(error);
+        els.bugError.textContent = "Could not add bug report. Check Firestore rules.";
+      } finally {
+        els.bugSubmitBtn.disabled = false;
+      }
+    }
+
+    function openBugSidebar() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      if (!getSelectedUser()) {
+        openNameGate();
+        showToast("Select your name first.");
+        return;
+      }
+
+      renderBugReports();
+      els.bugSidebarShell.classList.add("visible");
+      setTimeout(() => els.bugTitleInput.focus(), 0);
+    }
+
+    function closeBugSidebar() {
+      els.bugSidebarShell.classList.remove("visible");
+      els.bugError.textContent = "";
+    }
+
+    function renderBugReports() {
+      if (!els.bugList) return;
+
+      if (!bugReports.length) {
+        els.bugList.innerHTML = `<p class="bug-empty">No bugs reported yet.</p>`;
+        return;
+      }
+
+      const grouped = new Map();
+      bugReports.forEach((report) => {
+        const name = report.reporterName || "Unknown";
+        if (!grouped.has(name)) grouped.set(name, []);
+        grouped.get(name).push(report);
+      });
+
+      els.bugList.innerHTML = [...grouped.entries()]
+        .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+        .map(([name, reports]) => `
+          <section class="bug-group">
+            <h3 class="bug-group-name">${escapeHtml(name)}</h3>
+            ${reports
+              .sort((a, b) => getBugTime(b) - getBugTime(a))
+              .map(report => `
+                <article class="bug-item">
+                  <p class="bug-item-title">${escapeHtml(report.title || "Untitled bug")}</p>
+                  ${report.details ? `<p class="bug-item-details">${escapeHtml(report.details)}</p>` : ""}
+                  <p class="bug-item-meta">${escapeHtml(formatBugDate(report))}</p>
+                </article>
+              `).join("")}
+          </section>
+        `).join("");
+    }
+
+    function getBugTime(report) {
+      if (report?.createdAt?.toDate) return report.createdAt.toDate().getTime();
+      if (report?.createdAtLocal) return new Date(report.createdAtLocal).getTime() || 0;
+      return 0;
+    }
+
+    function formatBugDate(report) {
+      const time = getBugTime(report);
+      if (!time) return "Date unavailable";
+      return new Date(time).toLocaleString(undefined, {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
 
     async function claimCarpark(dateKey, carpark) {
       const user = getSelectedUser();
@@ -1503,8 +1890,14 @@
 
     function openFreeTodayDialog() {
       const user = getSelectedUser();
-      const todayKey = getDateKey(new Date());
+      const today = new Date();
+      const todayKey = getDateKey(today);
       const available = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
+
+      if (isWeekendDate(today)) {
+        showToast("Free Carpark Today is only available on weekdays.");
+        return;
+      }
 
       if (!isAuthenticated) {
         openAuthGate();
@@ -1553,11 +1946,13 @@
 
       renderStatusBox(weekStart, weekLabel, isOpen);
 
-      const todayKey = getDateKey(new Date());
+      const today = new Date();
+      const todayKey = getDateKey(today);
+      const todayIsWeekend = isWeekendDate(today);
       const todayIsVisible = getDateKey(weekStart) <= todayKey && todayKey <= getDateKey(weekEnd);
       const availableToday = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
       const userHasTodayClaim = user ? userUsedOnDate(bookings, todayKey, user) : false;
-      els.todayPanel.classList.toggle("visible", todayIsVisible && availableToday.length > 0 && !userHasTodayClaim && weekOffset === 0);
+      els.todayPanel.classList.toggle("visible", !todayIsWeekend && todayIsVisible && availableToday.length > 0 && !userHasTodayClaim && weekOffset === 0);
 
       els.daysGrid.innerHTML = "";
       for (let index = 0; index < 7; index++) {
@@ -1584,7 +1979,7 @@
       const dateKey = getDateKey(date);
       const todayKey = getDateKey(new Date());
       const isToday = dateKey === todayKey;
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      const isWeekend = isWeekendDate(date);
 
       const day = document.createElement("article");
       day.className = `day ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}`;
@@ -1694,9 +2089,13 @@
     }
 
     function canBookDate(date) {
-      if (date.getDay() === 0 || date.getDay() === 6) return false;
+      if (isWeekendDate(date)) return false;
       const weekStart = getMonday(date);
       return isWeekOpen(weekStart);
+    }
+
+    function isWeekendDate(date) {
+      return date.getDay() === 0 || date.getDay() === 6;
     }
 
     function getWeekLabel(offset) {
@@ -1747,15 +2146,29 @@
       return claim.userId === user.id || claim.person === user.name || (user.email && claim.email === user.email);
     }
 
-    function openAuthGate() {
+    function openAuthGate(mode = "login") {
       els.app.classList.add("locked");
       els.authGate.classList.add("visible");
       els.nameGate.classList.remove("visible");
-      setTimeout(() => els.pinInput.focus(), 0);
+      setAuthGateMode(mode);
     }
 
     function closeAuthGate() {
       els.authGate.classList.remove("visible");
+    }
+
+    function setAuthGateMode(mode) {
+      const isValidating = mode === "validating";
+      els.authValidationView.classList.toggle("hidden", !isValidating);
+      els.authLoginView.classList.toggle("hidden", isValidating);
+
+      if (isValidating) {
+        els.authStatusText.textContent = "Checking saved login...";
+        els.pinError.textContent = "";
+        return;
+      }
+
+      setTimeout(() => els.pinInput.focus(), 0);
     }
 
     function openNameGate() {
