@@ -456,8 +456,10 @@
     }
 
     .day.today {
-      border-color: rgba(251, 191, 36, 0.9);
-      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16) inset;
+      border-color: rgba(37, 99, 235, 0.9);
+      box-shadow:
+        0 0 0 2px rgba(37, 99, 235, 0.20) inset,
+        0 0 0 1px rgba(37, 99, 235, 0.28);
     }
 
     .day.blink-today {
@@ -467,13 +469,15 @@
     @keyframes todayBlink {
       0%, 100% {
         transform: scale(1);
-        box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16) inset;
+        box-shadow:
+          0 0 0 2px rgba(37, 99, 235, 0.20) inset,
+          0 0 0 1px rgba(37, 99, 235, 0.28);
       }
       50% {
         transform: scale(1.025);
         box-shadow:
-          0 0 0 3px rgba(251, 191, 36, 0.65),
-          0 12px 28px rgba(251, 191, 36, 0.22);
+          0 0 0 3px rgba(37, 99, 235, 0.68),
+          0 12px 28px rgba(37, 99, 235, 0.22);
       }
     }
 
@@ -487,7 +491,7 @@
       }
       50% {
         transform: scale(1.08);
-        box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.72);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.72);
       }
     }
 
@@ -726,14 +730,27 @@
       height: 20px;
       min-width: 20px;
       padding: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
       font-size: 0.78rem;
       line-height: 1;
       border-radius: 999px;
       box-shadow: 0 6px 12px rgba(239, 68, 68, 0.24);
       z-index: 4;
+    }
+
+    .park-remove-btn:hover {
+      transform: translateX(-50%) translateY(-1px);
+    }
+
+    .park-remove-btn:active {
+      transform: translateX(-50%) scale(0.96);
+    }
+
+    .remove-x {
+      display: block;
+      line-height: 1;
+      transform: translateY(-1px);
     }
 
     dialog {
@@ -1147,6 +1164,10 @@
         height: 14px;
         min-width: 14px;
         font-size: 0.56rem;
+      }
+
+      .remove-x {
+        transform: translateY(-0.75px);
       }
       #prevWeekBtn,
       #nextWeekBtn {
@@ -2375,7 +2396,7 @@
 
           const removeBtn = document.createElement("button");
           removeBtn.className = "danger park-remove-btn";
-          removeBtn.textContent = "×";
+          removeBtn.innerHTML = `<span class="remove-x" aria-hidden="true">×</span>`;
           removeBtn.title = "Remove claim";
           removeBtn.setAttribute("aria-label", `Remove carpark ${park} claim`);
           removeBtn.addEventListener("click", () => openRemoveDialog(dateKey, park, claim));
