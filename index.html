@@ -542,6 +542,12 @@
       background: #fff;
       transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, border-color 150ms ease;
       overflow: visible;
+      isolation: isolate;
+    }
+
+    .park > * {
+      position: relative;
+      z-index: 1;
     }
 
     .park.available {
@@ -550,10 +556,21 @@
     }
 
     .park.available.bookable {
-      background: linear-gradient(135deg, #15803d, #166534);
-      border-color: #14532d;
+      background: var(--green-light);
+      border-color: rgba(34, 197, 94, 0.35);
       cursor: pointer;
       color: #ffffff;
+    }
+
+    .park.available.bookable::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #15803d, #166534);
+      border: 1px solid #14532d;
+      z-index: 0;
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, opacity 150ms ease;
     }
 
     .park.available.bookable .park-no,
@@ -564,6 +581,9 @@
     .park.available.bookable:hover {
       transform: translateY(-3px) scale(1.04);
       box-shadow: 0 12px 24px rgba(21, 128, 61, 0.22);
+    }
+
+    .park.available.bookable:hover::before {
       background: linear-gradient(135deg, #166534, #14532d);
     }
 
@@ -572,10 +592,60 @@
       box-shadow: 0 5px 12px rgba(21, 128, 61, 0.18);
     }
 
+    .park.available.bookable.claim-pop {
+      pointer-events: none;
+      background: var(--green-light);
+      border-color: rgba(34, 197, 94, 0.35);
+      transform: scale(1);
+    }
+
+    .park.available.bookable.claim-pop::before {
+      animation: carparkClaimPop 360ms cubic-bezier(0.18, 0.9, 0.22, 1) forwards;
+    }
+
+    .park.available.bookable.claim-pop .park-no,
+    .park.available.bookable.claim-pop .park-state {
+      animation: carparkClaimText 220ms ease forwards;
+    }
+
+    @keyframes carparkClaimPop {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 5px 12px rgba(21, 128, 61, 0.18);
+      }
+      48% {
+        opacity: 1;
+        transform: scale(1.18);
+        box-shadow: 0 16px 30px rgba(21, 128, 61, 0.30);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1.28);
+        box-shadow: 0 20px 36px rgba(21, 128, 61, 0);
+      }
+    }
+
+    @keyframes carparkClaimText {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.92);
+      }
+    }
+
     .park.available.today-available {
-      background: linear-gradient(135deg, #fde68a, var(--gold));
+      background: var(--green-light);
       border-color: rgba(251, 191, 36, 0.75);
       color: var(--text);
+    }
+
+    .park.available.today-available::before {
+      background: linear-gradient(135deg, #fde68a, var(--gold));
+      border-color: rgba(251, 191, 36, 0.75);
     }
 
     .park.available.today-available .park-no,
@@ -585,8 +655,11 @@
 
     .park.available.today-available:hover {
       transform: translateY(-3px) scale(1.04);
-      background: linear-gradient(135deg, #fde68a, #f59e0b);
       box-shadow: 0 12px 24px rgba(251, 191, 36, 0.28);
+    }
+
+    .park.available.today-available:hover::before {
+      background: linear-gradient(135deg, #fde68a, #f59e0b);
     }
 
     .park.available.today-available:active {
@@ -598,6 +671,12 @@
       background: var(--green-light);
       opacity: 1;
       cursor: default;
+    }
+
+    .park.available.disabled::before,
+    .park.taken::before,
+    .day.weekend .park::before {
+      content: none;
     }
 
     .park[role="button"]:focus-visible {
@@ -1433,7 +1512,7 @@
         els.authStatusText.textContent = "Firebase could not load.";
         els.pinError.textContent = "Firebase could not load. Check your Firebase config and internet connection.";
         els.unlockBtn.disabled = true;
-        els.presenceLine.textContent = "Locked";
+        renderPresence([]);
         openAuthGate("login");
         return;
       }
@@ -1568,7 +1647,7 @@
       USERS = [];
       usersById = new Map();
       populateUserSelects();
-      els.presenceLine.textContent = "Locked";
+      renderPresence([]);
       els.tokenText.textContent = "Locked";
       els.daysGrid.innerHTML = "";
       openAuthGate(authMode);
@@ -1941,6 +2020,25 @@
       }
     }
 
+    async function animateAndClaimCarpark(parkEl, dateKey, carpark) {
+      if (!parkEl || parkEl.classList.contains("claim-pop")) return;
+
+      parkEl.classList.remove("claim-pop");
+      void parkEl.offsetWidth;
+      parkEl.classList.add("claim-pop");
+
+      await delay(360);
+      await claimCarpark(dateKey, carpark);
+
+      if (parkEl.isConnected) {
+        parkEl.classList.remove("claim-pop");
+      }
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async function removeCarparkClaim(dateKey, carpark) {
       if (!isAuthenticated) {
         openAuthGate();
@@ -1974,13 +2072,13 @@
 
     function startPresence() {
       if (!realtimeApi || !isAuthenticated) {
-        els.presenceLine.textContent = isAuthenticated ? "Shared mode" : "Locked";
+        renderPresence([]);
         return;
       }
 
       const user = getSelectedUser();
       if (!user) {
-        els.presenceLine.textContent = "Shared mode";
+        renderPresence([]);
         return;
       }
 
@@ -2005,7 +2103,7 @@
         renderPresence(activeUsers);
       }, (error) => {
         console.error(error);
-        els.presenceLine.textContent = "Shared mode";
+        renderPresence([]);
       });
     }
 
@@ -2047,7 +2145,7 @@
       const names = [...new Set(activeUsers.map(user => user.name).filter(Boolean))];
 
       if (!names.length) {
-        els.presenceLine.textContent = "No one active";
+        els.presenceLine.innerHTML = `<span class="presence-label">Online</span>`;
         return;
       }
 
@@ -2296,11 +2394,11 @@
           if (canClaimThisCell) {
             parkEl.setAttribute("role", "button");
             parkEl.setAttribute("tabindex", "0");
-            parkEl.addEventListener("click", () => claimCarpark(dateKey, park));
+            parkEl.addEventListener("click", () => animateAndClaimCarpark(parkEl, dateKey, park));
             parkEl.addEventListener("keydown", (event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                claimCarpark(dateKey, park);
+                animateAndClaimCarpark(parkEl, dateKey, park);
               }
             });
           }
