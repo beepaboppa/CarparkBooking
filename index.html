@@ -723,9 +723,9 @@
 
     .park-remove-btn {
       position: absolute;
-      left: 50%;
-      top: 6px;
-      transform: translateX(-50%);
+      left: 85.4%;
+      top: 85.4%;
+      transform: translate(-50%, -50%);
       width: 20px;
       height: 20px;
       min-width: 20px;
@@ -740,11 +740,11 @@
     }
 
     .park-remove-btn:hover {
-      transform: translateX(-50%) translateY(-1px);
+      transform: translate(-50%, calc(-50% - 1px));
     }
 
     .park-remove-btn:active {
-      transform: translateX(-50%) scale(0.96);
+      transform: translate(-50%, -50%) scale(0.96);
     }
 
     .remove-x {
@@ -1159,7 +1159,9 @@
       .park-state { font-size: 0.64rem; font-weight: 450; }
       .park-state.taken-name { font-size: 0.62rem; font-weight: 700; }
       .park-remove-btn {
-        top: 4px;
+        top: 85.4%;
+        left: 85.4%;
+        bottom: auto;
         width: 14px;
         height: 14px;
         min-width: 14px;
