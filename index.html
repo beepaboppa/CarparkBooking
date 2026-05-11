@@ -903,11 +903,19 @@
       line-height: 1.4;
     }
 
-    .bug-fab {
+    .fab-stack {
       position: fixed;
       right: 18px;
       bottom: 18px;
       z-index: 24;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .bug-fab {
+      position: static;
       background: #0f172a;
       color: #fff;
       box-shadow: var(--shadow);
@@ -1208,15 +1216,15 @@
         padding: 8px 16px;
         font-size: 0.86rem;
       }
-      .bug-fab {
+      .fab-stack {
         right: 10px;
-        bottom: 58px;
-        padding: 8px 12px;
-        font-size: 0.82rem;
+        bottom: 10px;
+        gap: 6px;
       }
 
-      .log-fab {
-        bottom: 10px;
+      .bug-fab {
+        padding: 8px 12px;
+        font-size: 0.82rem;
       }
       .bug-sidebar {
         width: 100%;
@@ -1397,7 +1405,10 @@
 
 
 
-  <button id="bugOpenBtn" class="bug-fab" type="button">Report bug</button>
+  <div class="fab-stack" aria-label="Quick actions">
+    <button id="bugOpenBtn" class="bug-fab" type="button">Report bug</button>
+    <button id="logOpenBtn" class="bug-fab log-fab" type="button">Booking log</button>
+  </div>
 
   <section id="bugSidebarShell" class="bug-sidebar-shell" aria-modal="true" role="dialog" aria-labelledby="bugSidebarTitle">
     <aside class="bug-sidebar">
@@ -1433,8 +1444,6 @@
       </form>
     </aside>
   </section>
-
-  <button id="logOpenBtn" class="bug-fab log-fab" type="button">Booking log</button>
 
   <section id="logSidebarShell" class="bug-sidebar-shell" aria-modal="true" role="dialog" aria-labelledby="logSidebarTitle">
     <aside class="bug-sidebar">
