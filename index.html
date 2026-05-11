@@ -1210,9 +1210,13 @@
       }
       .bug-fab {
         right: 10px;
-        bottom: 10px;
+        bottom: 58px;
         padding: 8px 12px;
         font-size: 0.82rem;
+      }
+
+      .log-fab {
+        bottom: 10px;
       }
       .bug-sidebar {
         width: 100%;
@@ -1430,6 +1434,24 @@
     </aside>
   </section>
 
+  <button id="logOpenBtn" class="bug-fab log-fab" type="button">Booking log</button>
+
+  <section id="logSidebarShell" class="bug-sidebar-shell" aria-modal="true" role="dialog" aria-labelledby="logSidebarTitle">
+    <aside class="bug-sidebar">
+      <div class="bug-sidebar-header">
+        <div>
+          <p class="small-label">Add-only log</p>
+          <h2 id="logSidebarTitle" class="bug-sidebar-title">Booking log</h2>
+        </div>
+        <button id="logCloseBtn" class="ghost bug-close-btn" type="button">Close</button>
+      </div>
+
+      <div id="logList" class="bug-list">
+        <p class="bug-empty">Loading booking log...</p>
+      </div>
+    </aside>
+  </section>
+
 
   <div id="toast" class="toast"></div>
 
@@ -1460,6 +1482,8 @@
     const USER_STORAGE_KEY = "carpark_selected_user_id_v5";
     const BROWSER_ID_KEY = "carpark_browser_id_v1";
     const BUG_REPORTS_COLLECTION = "bugReports";
+    const BOOKING_LOG_COLLECTION = "bookingLogs";
+    const DAILY_BOOKING_CUTOFF_HOUR = 17;
     const PRESENCE_ACTIVE_MS = 2 * 60 * 1000;
     const PRESENCE_HEARTBEAT_MS = 25 * 1000;
     const BOOKING_SNAPSHOT_HOLD_MS = 1400;
@@ -1516,12 +1540,17 @@
       bugDetailsInput: document.querySelector("#bugDetailsInput"),
       bugError: document.querySelector("#bugError"),
       bugSubmitBtn: document.querySelector("#bugSubmitBtn"),
+      logOpenBtn: document.querySelector("#logOpenBtn"),
+      logSidebarShell: document.querySelector("#logSidebarShell"),
+      logCloseBtn: document.querySelector("#logCloseBtn"),
+      logList: document.querySelector("#logList"),
       daysGrid: document.querySelector("#daysGrid"),
       toast: document.querySelector("#toast")
     };
 
     let bookings = {};
     let bugReports = [];
+    let bookingLogs = [];
     let weekOffset = 0;
     let pendingRemoval = null;
     let usingFirebase = false;
@@ -1531,6 +1560,7 @@
     let realtimeApi = null;
     let unsubscribeBookings = null;
     let unsubscribeBugReports = null;
+    let unsubscribeBookingLogs = null;
     let unsubscribePresence = null;
     let currentPresenceRef = null;
     let presenceHeartbeatInterval = null;
@@ -1538,6 +1568,8 @@
     let pendingBookingCells = new Map();
     let bookingSnapshotHoldUntil = 0;
     let blinkTodayAfterRender = false;
+    let currentSelectedUserId = "";
+    let loggedLoginForUserId = "";
 
     init();
 
@@ -1671,18 +1703,28 @@
       loadUserFromSavedSelection();
       await loadBookings();
       await loadBugReports();
+      await loadBookingLogs();
       startPresence();
+      await maybeLogLogin();
       render();
     }
 
     async function lockApp({ authMode = "login" } = {}) {
       await clearCurrentPresence();
       unsubscribeBookings?.();
+      unsubscribeBugReports?.();
+      unsubscribeBookingLogs?.();
       unsubscribePresence?.();
       unsubscribeBookings = null;
+      unsubscribeBugReports = null;
+      unsubscribeBookingLogs = null;
       unsubscribePresence = null;
       bookings = {};
+      bugReports = [];
+      bookingLogs = [];
       pendingBookingCells.clear();
+      currentSelectedUserId = "";
+      loggedLoginForUserId = "";
       USERS = [];
       usersById = new Map();
       populateUserSelects();
@@ -1720,10 +1762,12 @@
       if (valid) {
         els.userSelect.value = savedUserId;
         els.gateUserSelect.value = savedUserId;
+        currentSelectedUserId = savedUserId;
         closeNameGate();
       } else {
         els.userSelect.value = "";
         els.gateUserSelect.value = "";
+        currentSelectedUserId = "";
         openNameGate();
       }
     }
@@ -1735,31 +1779,43 @@
       });
 
       els.userSelect.addEventListener("change", async () => {
+        const previousUser = currentSelectedUserId ? usersById.get(currentSelectedUserId) : null;
         await clearCurrentPresence();
 
         if (!els.userSelect.value) {
           clearSavedSelectedUserId();
+          currentSelectedUserId = "";
           openNameGate();
           render();
           return;
         }
 
+        const nextUser = usersById.get(els.userSelect.value) || null;
         saveSelectedUserId(els.userSelect.value);
+        currentSelectedUserId = els.userSelect.value;
         els.gateUserSelect.value = els.userSelect.value;
         startPresence();
+        await logNameSwitch(previousUser, nextUser);
+        await maybeLogLogin();
         render();
       });
 
-      els.confirmNameBtn.addEventListener("click", () => {
+      els.confirmNameBtn.addEventListener("click", async () => {
         if (!els.gateUserSelect.value) {
           showToast("Select your name first.");
           return;
         }
 
+        const previousUser = currentSelectedUserId ? usersById.get(currentSelectedUserId) : null;
+        const nextUser = usersById.get(els.gateUserSelect.value) || null;
+
         saveSelectedUserId(els.gateUserSelect.value);
+        currentSelectedUserId = els.gateUserSelect.value;
         els.userSelect.value = els.gateUserSelect.value;
         closeNameGate();
         startPresence();
+        await logNameSwitch(previousUser, nextUser);
+        await maybeLogLogin();
         render();
       });
 
@@ -1796,6 +1852,12 @@
       els.bugForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await addBugReport();
+      });
+
+      els.logOpenBtn.addEventListener("click", openLogSidebar);
+      els.logCloseBtn.addEventListener("click", closeLogSidebar);
+      els.logSidebarShell.addEventListener("click", (event) => {
+        if (event.target === els.logSidebarShell) closeLogSidebar();
       });
 
       els.confirmFreeBtn.addEventListener("click", async (event) => {
@@ -1852,12 +1914,18 @@
 
         await loadUsers();
         populateUserSelects();
+        const previousUser = currentSelectedUserId ? usersById.get(currentSelectedUserId) : null;
+        const nextUser = usersById.get(userId) || { id: userId, name };
+
         saveSelectedUserId(userId);
+        currentSelectedUserId = userId;
         els.userSelect.value = userId;
         els.gateUserSelect.value = userId;
         closeNameGate();
         els.addUserDialog.close();
         startPresence();
+        await logNameSwitch(previousUser, nextUser);
+        await maybeLogLogin();
         render();
         showToast(`${name} added.`);
       } catch (error) {
@@ -2013,6 +2081,155 @@
       });
     }
 
+    async function loadBookingLogs() {
+      const logsRef = firestoreApi.collection(firestoreApi.db, BOOKING_LOG_COLLECTION);
+      unsubscribeBookingLogs?.();
+
+      unsubscribeBookingLogs = firestoreApi.onSnapshot(logsRef, (snap) => {
+        bookingLogs = snap.docs
+          .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+          .sort((a, b) => getLogTime(b) - getLogTime(a));
+        renderBookingLogs();
+      }, (error) => {
+        console.error(error);
+        if (els.logList) els.logList.innerHTML = `<p class="bug-empty">Booking log could not load. Check Firestore rules.</p>`;
+      });
+    }
+
+    function openLogSidebar() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      if (!getSelectedUser()) {
+        openNameGate();
+        showToast("Select your name first.");
+        return;
+      }
+
+      renderBookingLogs();
+      els.logSidebarShell.classList.add("visible");
+    }
+
+    function closeLogSidebar() {
+      els.logSidebarShell.classList.remove("visible");
+    }
+
+    function renderBookingLogs() {
+      if (!els.logList) return;
+
+      if (!bookingLogs.length) {
+        els.logList.innerHTML = `<p class="bug-empty">No log entries yet.</p>`;
+        return;
+      }
+
+      els.logList.innerHTML = bookingLogs
+        .slice()
+        .sort((a, b) => getLogTime(b) - getLogTime(a))
+        .slice(0, 80)
+        .map(entry => `
+          <article class="bug-item">
+            <p class="bug-item-title">${escapeHtml(getLogTitle(entry))}</p>
+            ${getLogDetails(entry) ? `<p class="bug-item-details">${escapeHtml(getLogDetails(entry))}</p>` : ""}
+            <p class="bug-item-meta">${escapeHtml(formatLogDate(entry))}</p>
+          </article>
+        `).join("");
+    }
+
+    function getLogTitle(entry) {
+      const actor = entry.actorName || "Unknown";
+
+      switch (entry.action) {
+        case "login":
+          return `${actor} logged in`;
+        case "name-switch":
+          return `${actor} changed name selection`;
+        case "booking-added":
+          return `${actor} booked Carpark ${entry.carpark}`;
+        case "booking-removed":
+          return `${actor} removed Carpark ${entry.carpark}`;
+        default:
+          return `${actor} - ${entry.action || "log entry"}`;
+      }
+    }
+
+    function getLogDetails(entry) {
+      const dateText = entry.dateDisplay || (entry.dateKey ? formatShortDate(parseDateKey(entry.dateKey)) : "");
+      const tokenText = Number(entry.tokenCost || 0) > 0 ? "1 token" : "no token";
+      const target = entry.targetName && entry.targetName !== entry.actorName ? ` for ${entry.targetName}` : "";
+
+      switch (entry.action) {
+        case "name-switch":
+          return `${entry.previousName || "None"} → ${entry.nextName || "None"}`;
+        case "booking-added":
+          return `${dateText}${target} — ${tokenText}`;
+        case "booking-removed":
+          return `${dateText}${target} — ${tokenText} restored/unchanged`;
+        default:
+          return entry.details || "";
+      }
+    }
+
+    function getLogTime(entry) {
+      if (entry?.createdAt?.toDate) return entry.createdAt.toDate().getTime();
+      if (entry?.createdAtLocal) return new Date(entry.createdAtLocal).getTime() || 0;
+      return 0;
+    }
+
+    function formatLogDate(entry) {
+      const time = getLogTime(entry);
+      if (!time) return "Date unavailable";
+      return new Date(time).toLocaleString(undefined, {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    async function addBookingLog(action, details = {}, actorOverride = null) {
+      if (!isAuthenticated || !firestoreApi) return;
+
+      const actor = actorOverride || getSelectedUser();
+      if (!actor) return;
+
+      try {
+        await firestoreApi.addDoc(firestoreApi.collection(firestoreApi.db, BOOKING_LOG_COLLECTION), {
+          action,
+          actorName: actor.name || "Unknown",
+          actorUserId: actor.id || "",
+          ...details,
+          createdAt: firestoreApi.serverTimestamp(),
+          createdAtLocal: new Date().toISOString(),
+          browserId: getBrowserId(),
+          page: location.pathname || "carpark-booking"
+        });
+      } catch (error) {
+        console.warn("Booking log write failed", error);
+      }
+    }
+
+    async function maybeLogLogin() {
+      const user = getSelectedUser();
+      if (!user || loggedLoginForUserId === user.id) return;
+
+      loggedLoginForUserId = user.id;
+      await addBookingLog("login", {}, user);
+    }
+
+    async function logNameSwitch(previousUser, nextUser) {
+      if (!nextUser) return;
+      if (!previousUser || previousUser.id === nextUser.id) return;
+
+      await addBookingLog("name-switch", {
+        previousName: previousUser.name || "",
+        previousUserId: previousUser.id || "",
+        nextName: nextUser.name || "",
+        nextUserId: nextUser.id || ""
+      }, nextUser);
+    }
+
 
     async function claimCarpark(dateKey, carpark) {
       const user = getSelectedUser();
@@ -2037,6 +2254,11 @@
         return false;
       }
 
+      if (isPastDailyCutoffForDate(requestedDate)) {
+        showToast("Bookings close at 5:00 pm for that day.");
+        return false;
+      }
+
       if (!canBookDate(requestedDate)) {
         showToast("That week is closed.");
         return false;
@@ -2054,6 +2276,7 @@
           const current = snap.exists() ? snap.data().bookings || {} : {};
           const existing = current?.[dateKey]?.[carpark];
 
+          if (isPastDailyCutoffForDate(requestedDate)) throw new Error("Bookings close at 5:00 pm for that day.");
           if (existing) throw new Error(`Carpark ${carpark} is already taken.`);
           if (userUsedOnDate(current, dateKey, user)) throw new Error("You have already claimed a carpark on this day.");
           if (costsToken && getTokensRemainingForWeek(requestedDate, current, user) <= 0) {
@@ -2071,6 +2294,15 @@
         bookings = updatedBookings;
         pendingBookingCells.delete(key);
         render();
+        await addBookingLog("booking-added", {
+          carpark,
+          dateKey,
+          dateDisplay: formatShortDate(requestedDate),
+          targetName: user.name,
+          targetUserId: user.id,
+          bookingMode: claimRecord.mode,
+          tokenCost: claimRecord.tokenCost
+        }, user);
         showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
         return true;
       } catch (error) {
@@ -2121,29 +2353,48 @@
 
       const key = getCellKey(dateKey, carpark);
       const date = parseDateKey(dateKey);
+
+      if (isPastDailyCutoffForDate(date)) {
+        showToast("Cancellations close at 5:00 pm for that day.");
+        return false;
+      }
       const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
 
       setPendingCell(dateKey, carpark, { type: "remove" });
       render();
 
       try {
-        const updatedBookings = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
+        const result = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
           const snap = await transaction.get(docRef);
           const current = snap.exists() ? snap.data().bookings || {} : {};
 
+          if (isPastDailyCutoffForDate(date)) throw new Error("Cancellations close at 5:00 pm for that day.");
           if (!current?.[dateKey]?.[carpark]) throw new Error("That claim no longer exists.");
+
+          const removedClaim = current[dateKey][carpark];
 
           delete current[dateKey][carpark];
           if (Object.keys(current[dateKey]).length === 0) delete current[dateKey];
 
           transaction.set(docRef, { bookings: current });
-          return current;
+          return { bookings: current, removedClaim };
         });
 
         bookingSnapshotHoldUntil = Date.now() + BOOKING_SNAPSHOT_HOLD_MS;
-        bookings = updatedBookings;
+        bookings = result.bookings;
         pendingBookingCells.delete(key);
         render();
+        const actor = getSelectedUser();
+        const removedClaim = result.removedClaim || {};
+        await addBookingLog("booking-removed", {
+          carpark,
+          dateKey,
+          dateDisplay: formatShortDate(date),
+          targetName: getClaimDisplayName(removedClaim),
+          targetUserId: removedClaim.userId || "",
+          bookingMode: removedClaim.mode || "",
+          tokenCost: Number(removedClaim.tokenCost || 0)
+        }, actor);
         showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
         return true;
       } catch (error) {
@@ -2270,6 +2521,13 @@
 
     async function handleRemoveClick(dateKey, carpark, claim) {
       const selectedUser = getSelectedUser();
+      const date = parseDateKey(dateKey);
+
+      if (isPastDailyCutoffForDate(date)) {
+        showToast("Cancellations close at 5:00 pm for that day.");
+        return;
+      }
+
       const isOwnClaim = claimBelongsToUser(claim, selectedUser);
 
       if (isOwnClaim) {
@@ -2311,6 +2569,11 @@
       const today = new Date();
       const todayKey = getDateKey(today);
       const available = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
+
+      if (isPastDailyCutoffForDate(today)) {
+        showToast("Bookings close at 5:00 pm for today.");
+        return;
+      }
 
       if (isWeekendDate(today)) {
         showToast("Free Carpark Today is only available on weekdays.");
@@ -2370,7 +2633,8 @@
       const todayIsVisible = getDateKey(weekStart) <= todayKey && todayKey <= getDateKey(weekEnd);
       const availableToday = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
       const userHasTodayClaim = user ? userUsedOnDate(bookings, todayKey, user) : false;
-      els.todayPanel.classList.toggle("visible", !todayIsWeekend && todayIsVisible && availableToday.length > 0 && !userHasTodayClaim && weekOffset === 0);
+      const todayBookingClosed = isPastDailyCutoffForDate(today);
+      els.todayPanel.classList.toggle("visible", !todayBookingClosed && !todayIsWeekend && todayIsVisible && availableToday.length > 0 && !userHasTodayClaim && weekOffset === 0);
 
       els.daysGrid.innerHTML = "";
       for (let index = 0; index < 7; index++) {
@@ -2469,7 +2733,7 @@
             </div>
           `;
 
-          if (!pending) {
+          if (!pending && !isPastDailyCutoffForDate(date)) {
             const removeBtn = document.createElement("button");
             removeBtn.className = "danger park-remove-btn";
             removeBtn.innerHTML = `<span class="remove-x" aria-hidden="true">×</span>`;
@@ -2601,8 +2865,19 @@
 
     function canBookDate(date) {
       if (isWeekendDate(date)) return false;
+      if (isPastDailyCutoffForDate(date)) return false;
       const weekStart = getMonday(date);
       return isWeekOpen(weekStart);
+    }
+
+    function isPastDailyCutoffForDate(date) {
+      return new Date() >= getDailyCutoffDate(date);
+    }
+
+    function getDailyCutoffDate(date) {
+      const cutoff = new Date(date);
+      cutoff.setHours(DAILY_BOOKING_CUTOFF_HOUR, 0, 0, 0);
+      return cutoff;
     }
 
     function isWeekendDate(date) {
