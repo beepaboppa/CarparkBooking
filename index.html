@@ -1265,7 +1265,7 @@
     <section class="hero">
       <div class="title-block">
         <h1>Carpark Booking System</h1>
-        <p class="subtitle"></p>
+        <p class="subtitle">Select your name, choose an available space, and manage weekly bookings.</p>
       </div>
 
       <div class="top-strip">
@@ -1525,6 +1525,7 @@
     const BUG_REPORTS_COLLECTION = "bugReports";
     const BOOKING_LOG_COLLECTION = "bookingLogs";
     const DAILY_BOOKING_CUTOFF_HOUR = 17;
+    const RECENT_LIST_LIMIT = 50;
     const PRESENCE_ACTIVE_MS = 2 * 60 * 1000;
     const PRESENCE_HEARTBEAT_MS = 25 * 1000;
     const BOOKING_SNAPSHOT_HOLD_MS = 1400;
@@ -1661,6 +1662,9 @@
           collection,
           getDocs,
           onSnapshot,
+          query,
+          orderBy,
+          limit,
           setDoc,
           addDoc,
           runTransaction,
@@ -1693,6 +1697,9 @@
           collection,
           getDocs,
           onSnapshot,
+          query,
+          orderBy,
+          limit,
           setDoc,
           addDoc,
           runTransaction,
@@ -1746,8 +1753,6 @@
       populateUserSelects();
       loadUserFromSavedSelection();
       await loadBookings();
-      await loadBugReports();
-      await loadBookingLogs();
       startPresence();
       await maybeLogLogin();
       render();
@@ -1766,6 +1771,8 @@
       bookings = {};
       bugReports = [];
       bookingLogs = [];
+      if (els.bugList) els.bugList.innerHTML = `<p class="bug-empty">Open Report bug to load latest reports.</p>`;
+      if (els.logList) els.logList.innerHTML = `<p class="bug-empty">Open Booking log to load latest entries.</p>`;
       pendingBookingCells.clear();
       currentSelectedUserId = "";
       loggedLoginForUserId = "";
@@ -2003,9 +2010,15 @@
 
     async function loadBugReports() {
       const reportsRef = firestoreApi.collection(firestoreApi.db, BUG_REPORTS_COLLECTION);
+      const recentReportsQuery = firestoreApi.query(
+        reportsRef,
+        firestoreApi.orderBy("createdAtLocal", "desc"),
+        firestoreApi.limit(RECENT_LIST_LIMIT)
+      );
+
       unsubscribeBugReports?.();
 
-      unsubscribeBugReports = firestoreApi.onSnapshot(reportsRef, (snap) => {
+      unsubscribeBugReports = firestoreApi.onSnapshot(recentReportsQuery, (snap) => {
         bugReports = snap.docs
           .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
           .sort((a, b) => getBugTime(b) - getBugTime(a));
@@ -2064,7 +2077,7 @@
       }
     }
 
-    function openBugSidebar() {
+    async function openBugSidebar() {
       if (!isAuthenticated) {
         openAuthGate();
         return;
@@ -2076,7 +2089,13 @@
         return;
       }
 
-      renderBugReports();
+      if (!unsubscribeBugReports) {
+        els.bugList.innerHTML = `<p class="bug-empty">Loading latest ${RECENT_LIST_LIMIT} bug reports...</p>`;
+        await loadBugReports();
+      } else {
+        renderBugReports();
+      }
+
       els.bugSidebarShell.classList.add("visible");
       setTimeout(() => els.bugTitleInput.focus(), 0);
     }
@@ -2097,6 +2116,7 @@
       els.bugList.innerHTML = bugReports
         .slice()
         .sort((a, b) => getBugTime(b) - getBugTime(a))
+        .slice(0, RECENT_LIST_LIMIT)
         .map(report => {
           const reporter = report.reporterName || "Unknown";
           const title = report.title || "Untitled bug";
@@ -2129,9 +2149,15 @@
 
     async function loadBookingLogs() {
       const logsRef = firestoreApi.collection(firestoreApi.db, BOOKING_LOG_COLLECTION);
+      const recentLogsQuery = firestoreApi.query(
+        logsRef,
+        firestoreApi.orderBy("createdAtLocal", "desc"),
+        firestoreApi.limit(RECENT_LIST_LIMIT)
+      );
+
       unsubscribeBookingLogs?.();
 
-      unsubscribeBookingLogs = firestoreApi.onSnapshot(logsRef, (snap) => {
+      unsubscribeBookingLogs = firestoreApi.onSnapshot(recentLogsQuery, (snap) => {
         bookingLogs = snap.docs
           .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
           .sort((a, b) => getLogTime(b) - getLogTime(a));
@@ -2142,7 +2168,7 @@
       });
     }
 
-    function openLogSidebar() {
+    async function openLogSidebar() {
       if (!isAuthenticated) {
         openAuthGate();
         return;
@@ -2154,7 +2180,13 @@
         return;
       }
 
-      renderBookingLogs();
+      if (!unsubscribeBookingLogs) {
+        els.logList.innerHTML = `<p class="bug-empty">Loading latest ${RECENT_LIST_LIMIT} log entries...</p>`;
+        await loadBookingLogs();
+      } else {
+        renderBookingLogs();
+      }
+
       els.logSidebarShell.classList.add("visible");
     }
 
@@ -2186,7 +2218,7 @@
       }
 
       els.logList.innerHTML = filteredLogs
-        .slice(0, 80)
+        .slice(0, RECENT_LIST_LIMIT)
         .map(entry => `
           <article class="bug-item">
             <p class="bug-item-title">${escapeHtml(getLogTitle(entry))}</p>
