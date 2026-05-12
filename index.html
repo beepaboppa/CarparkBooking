@@ -70,6 +70,26 @@
       gap: 4px;
     }
 
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: nowrap;
+    }
+
+    .brand-logo {
+      width: clamp(78px, 12vw, 148px);
+      height: auto;
+      display: block;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
+
+    .brand-logo[hidden] {
+      display: none;
+    }
+
     h1 {
       margin: 0;
       font-family: var(--font-display);
@@ -1099,6 +1119,8 @@
     @media (max-width: 620px) {
       body { padding: 8px; }
       h1 { font-size: 1.6rem; }
+      .brand-row { gap: 8px; }
+      .brand-logo { width: 70px; }
       .subtitle { display: none; }
       .hero { gap: 8px; margin-bottom: 10px; }
       .booking-card {
@@ -1296,7 +1318,10 @@
   <main id="app" class="app locked">
     <section class="hero">
       <div class="title-block">
-        <h1>Carpark Booking System</h1>
+        <div class="brand-row">
+          <img id="brandLogo" class="brand-logo" alt="ARUP parking logo" hidden />
+          <h1>Carpark Booking System</h1>
+        </div>
         <p class="subtitle">Select your name, choose an available space, and manage weekly bookings.</p>
       </div>
 
@@ -1559,6 +1584,8 @@
     const BROWSER_ID_KEY = "carpark_browser_id_v1";
     const BUG_REPORTS_COLLECTION = "bugReports";
     const BOOKING_LOG_COLLECTION = "bookingLogs";
+    const BRANDING_DOC_COLLECTION = "appSettings";
+    const BRANDING_DOC_ID = "branding";
     const DAILY_BOOKING_CUTOFF_HOUR = 17;
     const SHORT_NOTICE_TOMORROW_START_HOUR = 21;
     const SHORT_NOTICE_BOOKING_MODE = "short-notice";
@@ -1575,6 +1602,7 @@
 
     const els = {
       app: document.querySelector("#app"),
+      brandLogo: document.querySelector("#brandLogo"),
       authGate: document.querySelector("#authGate"),
       authValidationView: document.querySelector("#authValidationView"),
       authLoginView: document.querySelector("#authLoginView"),
@@ -1663,6 +1691,7 @@
       wireEvents();
       openAuthGate("validating");
       await setupFirebase();
+      await loadBrandingAssets();
 
       if (!usingFirebase || !authApi) {
         els.authStatusText.textContent = "Firebase could not load.";
@@ -1701,6 +1730,7 @@
           getFirestore,
           doc,
           collection,
+          getDoc,
           getDocs,
           onSnapshot,
           query,
@@ -1736,6 +1766,7 @@
           db: getFirestore(app),
           doc,
           collection,
+          getDoc,
           getDocs,
           onSnapshot,
           query,
@@ -1765,6 +1796,52 @@
       }
     }
 
+    async function loadBrandingAssets() {
+      if (!firestoreApi) return;
+
+      try {
+        const brandingRef = firestoreApi.doc(
+          firestoreApi.db,
+          BRANDING_DOC_COLLECTION,
+          BRANDING_DOC_ID
+        );
+        const brandingSnap = await firestoreApi.getDoc(brandingRef);
+        if (!brandingSnap.exists()) return;
+
+        const branding = brandingSnap.data() || {};
+        setFirestoreImage(els.brandLogo, branding.logoDataUrl);
+        setFirestoreFavicon(branding.faviconDataUrl);
+      } catch (error) {
+        console.warn("Could not load branding from Firestore.", error);
+      }
+    }
+
+    function setFirestoreImage(imageElement, dataUrl) {
+      if (!imageElement || !isImageDataUrl(dataUrl)) return;
+
+      imageElement.src = dataUrl;
+      imageElement.hidden = false;
+    }
+
+    function setFirestoreFavicon(dataUrl) {
+      if (!isImageDataUrl(dataUrl)) return;
+
+      let icon = document.querySelector('link[rel="icon"]');
+
+      if (!icon) {
+        icon = document.createElement("link");
+        icon.rel = "icon";
+        document.head.appendChild(icon);
+      }
+
+      icon.type = "image/png";
+      icon.href = dataUrl;
+    }
+
+    function isImageDataUrl(value) {
+      return typeof value === "string" && /^data:image\/(png|jpeg|jpg|webp|svg\+xml);base64,/i.test(value);
+    }
+
     async function unlockWithPin() {
       const password = els.pinInput.value.trim();
 
@@ -1790,6 +1867,7 @@
 
     async function finishUnlock() {
       closeAuthGate();
+      await loadBrandingAssets();
       await loadUsers();
       populateUserSelects();
       loadUserFromSavedSelection();
