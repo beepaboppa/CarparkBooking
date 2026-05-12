@@ -1311,7 +1311,7 @@
           <span id="shortNoticeLabel" class="today-label">Short Notice Booking:</span>
           <button id="freeTodayBtn" class="gold">Claim</button>
         </div>
-        <div id="shortNoticeNote" class="today-note">No weekly allowance used for short-notice bookings: same-day before 5:00 pm, or next-day from 9:00 pm the night before.</div>
+        <div id="shortNoticeNote" class="today-note">No weekly allowance used for short-notice bookings: Same day or 9pm the night before.</div>
       </div>
 
       <div id="daysGrid" class="days"></div>
@@ -2686,7 +2686,7 @@
       const shortNoticeDate = getShortNoticeBookingDate();
 
       if (!shortNoticeDate) {
-        showToast("Short notice bookings are available for today before 5:00 pm, or tomorrow after 9:00 pm.");
+        showToast("No weekly allowance used for short-notice bookings: Same day or 9pm the night before.");
         return;
       }
 
@@ -2758,7 +2758,7 @@
 
       if (shortNoticeDate) {
         els.shortNoticeLabel.textContent = `Short Notice Booking (${formatShortDate(shortNoticeDate)}):`;
-        els.shortNoticeNote.textContent = "No weekly allowance used for short-notice bookings: same-day before 5:00 pm, or next-day from 9:00 pm the night before.";
+        els.shortNoticeNote.textContent = "No weekly allowance used for short-notice bookings: Same day or 9pm the night before.";
       }
 
       els.todayPanel.classList.toggle("visible", showShortNoticePanel);
