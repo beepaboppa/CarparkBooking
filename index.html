@@ -1,1 +1,3250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carpark Booking System</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: #d0d8e4;
+      --blue: #38bdf8;
+      --green-light: rgba(34, 197, 94, 0.12);
+      --gold: #fbbf24;
+      --red: #ef4444;
+      --weekend: #d7dee8;
+      --weekend-inner: #c8d1de;
+      --shadow: 0 12px 34px rgba(15, 23, 42, 0.07);
+      --radius: 16px;
+      --font-sans: Inter, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+      --font-display: "SF Pro Display", Inter, "Segoe UI Variable Display", "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+      --calendar-column: 112px;
+      --calendar-gap: 9px;
+      --calendar-pad: 14px;
+      --calendar-outer-width: calc((var(--calendar-column) * 7) + (var(--calendar-gap) * 6) + (var(--calendar-pad) * 2));
+    }
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      font-weight: 400;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.08), transparent 30%),
+        radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.08), transparent 28%),
+        linear-gradient(135deg, #f8fafc, var(--bg));
+      padding: 18px;
+    }
+
+    .app {
+      width: min(1360px, 100%);
+      margin: 0 auto;
+      transition: filter 160ms ease, opacity 160ms ease;
+    }
+
+    .app.locked {
+      filter: blur(8px);
+      opacity: 0.5;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .hero {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .title-block {
+      display: grid;
+      justify-items: center;
+      text-align: center;
+      gap: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4.6vw, 3.2rem);
+      font-weight: 800;
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
+
+    .subtitle {
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 0.96rem;
+      font-weight: 400;
+      line-height: 1.45;
+      max-width: 720px;
+      text-align: center;
+    }
+
+    .top-strip {
+      width: min(var(--calendar-outer-width), 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "status allowance"
+        "name name"
+        "notice notice";
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .top-strip .compact-card:nth-child(1) {
+      grid-area: status;
+    }
+
+    .top-strip .compact-card:nth-child(2) {
+      grid-area: name;
+    }
+
+    .top-strip .compact-card:nth-child(3) {
+      grid-area: allowance;
+    }
+
+    .top-strip .compact-card:nth-child(4) {
+      grid-area: notice;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .compact-card {
+      padding: 12px 14px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .allowance-card {
+      text-align: center;
+      justify-items: center;
+    }
+
+    .short-notice-info-card {
+      background: var(--panel) !important;
+      border-color: var(--line) !important;
+      box-shadow: var(--shadow);
+      text-align: center;
+      justify-items: center;
+      align-content: center;
+      padding: 11px 14px;
+    }
+
+    .short-notice-info-text {
+      color: var(--muted);
+      font-size: 0.94rem;
+      font-weight: 400 !important;
+      line-height: 1.35;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .small-label,
+    .name-label {
+      color: var(--muted);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin: 0;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .status-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+      font-weight: 760;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.84rem;
+      border: 1px solid transparent;
+    }
+
+    .status-badge.open {
+      background: rgba(34, 197, 94, 0.14);
+      color: #15803d;
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+
+    .status-badge.closed {
+      background: rgba(239, 68, 68, 0.12);
+      color: #b91c1c;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .week-open-timer {
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    label {
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    select,
+    input,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      padding: 10px 11px;
+      outline: none;
+      font-size: 0.95rem;
+      font-weight: 450;
+    }
+
+    select option { color: var(--text); }
+
+    .name-row {
+      display: grid;
+      grid-template-columns: minmax(190px, 280px) auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .add-user-btn {
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.86rem;
+    }
+
+    .gate-error {
+      color: #b91c1c;
+      font-size: 0.86rem;
+      font-weight: 800;
+      margin: 0;
+      min-height: 1.1em;
+    }
+
+    .auth-view.hidden {
+      display: none;
+    }
+
+    .auth-status {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 650;
+      margin: 0;
+      min-height: 1.1em;
+    }
+
+    .selected-email {
+      display: none;
+    }
+
+    .presence-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 0;
+      min-width: 0;
+      font-size: 0.84rem;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+
+    .presence-label {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .presence-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 5px 10px;
+      min-height: 30px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      white-space: nowrap;
+      font-weight: 400;
+    }
+
+    .presence-color-0 { color: #2563eb; }
+    .presence-color-1 { color: #16a34a; }
+    .presence-color-2 { color: #9333ea; }
+    .presence-color-3 { color: #ea580c; }
+    .presence-color-4 { color: #db2777; }
+    .presence-color-5 { color: #0891b2; }
+    .presence-color-6 { color: #ca8a04; }
+    .presence-color-7 { color: #dc2626; }
+
+    .allowance-week {
+      display: none;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 900;
+      text-align: center;
+      margin: 0;
+    }
+
+    .token {
+      color: var(--text);
+      font-weight: 800;
+      font-size: 1.14rem;
+      line-height: 1.1;
+      text-align: center;
+      margin: 0;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      color: #020617;
+      background: #e2e8f0;
+      font-weight: 750;
+      font-size: 0.98rem;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .primary { background: var(--blue); }
+
+    .gold {
+      background: linear-gradient(135deg, #fde68a, var(--gold));
+      box-shadow: 0 8px 18px rgba(251, 191, 36, 0.18);
+    }
+
+    .danger {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .ghost {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .jump-btn:not(:disabled) {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #075985;
+    }
+
+    .booking-card {
+      width: min(var(--calendar-outer-width), 100%);
+      max-width: 100%;
+      margin: 0 auto;
+      padding: var(--calendar-pad);
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+    }
+
+    .week-nav {
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .week-center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      text-align: center;
+    }
+
+    .week-meta {
+      display: grid;
+      gap: 2px;
+      justify-items: center;
+    }
+
+    .week-range,
+    .week-context {
+      font-size: 1.22rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .week-range {
+      letter-spacing: -0.03em;
+    }
+
+    .today-panel {
+      display: none;
+      justify-self: center;
+      justify-items: center;
+      gap: 4px;
+      margin: 0 auto 2px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: rgba(251, 191, 36, 0.14);
+      border: 1px solid rgba(251, 191, 36, 0.38);
+    }
+
+    .today-panel.visible { display: grid; }
+
+    .today-main {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .today-label {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, var(--calendar-column));
+      gap: var(--calendar-gap);
+      justify-content: center;
+    }
+
+    .day {
+      width: var(--calendar-column);
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 8px 6px;
+      display: grid;
+      align-content: start;
+      justify-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .day.today {
+      border-color: rgba(37, 99, 235, 0.9);
+      box-shadow:
+        0 0 0 2px rgba(37, 99, 235, 0.20) inset,
+        0 0 0 1px rgba(37, 99, 235, 0.28);
+    }
+
+    .day.blink-today {
+      animation: todayBlink 520ms ease-in-out 4;
+    }
+
+    @keyframes todayBlink {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow:
+          0 0 0 2px rgba(37, 99, 235, 0.20) inset,
+          0 0 0 1px rgba(37, 99, 235, 0.28);
+      }
+      50% {
+        transform: scale(1.025);
+        box-shadow:
+          0 0 0 3px rgba(37, 99, 235, 0.68),
+          0 12px 28px rgba(37, 99, 235, 0.22);
+      }
+    }
+
+    .day.blink-today .park {
+      animation: todayParkBlink 520ms ease-in-out 4;
+    }
+
+    @keyframes todayParkBlink {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.72);
+      }
+    }
+
+    .day.weekend {
+      background: var(--weekend);
+      border-color: #b8c2d0;
+      opacity: 0.95;
+    }
+
+    .day-head {
+      width: 100%;
+      display: grid;
+      gap: 2px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .day-name {
+      width: 100%;
+      max-width: 100%;
+      font-weight: 800;
+      font-size: 0.96rem;
+      letter-spacing: -0.035em;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+
+    .day-name-short { display: none; }
+
+    .date {
+      color: var(--text);
+      font-size: 0.96rem;
+      font-weight: 650;
+    }
+
+    .park {
+      width: 82px;
+      height: 82px;
+      justify-self: center;
+      position: relative;
+      border-radius: 999px;
+      padding: 6px;
+      border: 1px solid #dbe2ea;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      text-align: center;
+      background: #fff;
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, border-color 150ms ease;
+      overflow: visible;
+      isolation: isolate;
+    }
+
+    .park > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .park.available {
+      background: var(--green-light);
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+
+    .park.available.bookable {
+      background: linear-gradient(135deg, #15803d, #166534);
+      border-color: #14532d;
+      cursor: pointer;
+      color: #ffffff;
+    }
+
+    .park.available.bookable .park-no,
+    .park.available.bookable .park-state {
+      color: #ffffff;
+    }
+
+    .park.available.bookable:hover {
+      transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 12px 24px rgba(21, 128, 61, 0.22);
+      background: linear-gradient(135deg, #166534, #14532d);
+    }
+
+    .park.available.bookable:active {
+      transform: translateY(0) scale(0.96);
+      box-shadow: 0 5px 12px rgba(21, 128, 61, 0.18);
+    }
+
+    .park.claiming {
+      pointer-events: none;
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+      transform: scale(1);
+    }
+
+    .claim-pop-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      border-radius: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 6px;
+      text-align: center;
+      background: linear-gradient(135deg, #15803d, #166534);
+      border: 1px solid #14532d;
+      color: #ffffff;
+      animation: carparkClaimPop 420ms cubic-bezier(0.15, 0.92, 0.18, 1) forwards;
+      transform-origin: center;
+    }
+
+    .claim-pop-layer .park-no,
+    .claim-pop-layer .park-state {
+      color: inherit;
+    }
+
+    .claim-pop-layer.gold-pop {
+      background: linear-gradient(135deg, #fde68a, var(--gold));
+      border-color: rgba(251, 191, 36, 0.75);
+      color: var(--text);
+    }
+
+    @keyframes carparkClaimPop {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 5px 12px rgba(21, 128, 61, 0.18);
+      }
+      42% {
+        opacity: 1;
+        transform: scale(1.15);
+        box-shadow: 0 16px 30px rgba(21, 128, 61, 0.26);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1.32);
+        box-shadow: 0 20px 36px rgba(21, 128, 61, 0);
+      }
+    }
+
+    .park.available.short-notice-available {
+      background: linear-gradient(135deg, #fde68a, var(--gold));
+      border-color: rgba(251, 191, 36, 0.75);
+      color: var(--text);
+    }
+
+    .park.available.short-notice-available .park-no,
+    .park.available.short-notice-available .park-state {
+      color: var(--text);
+    }
+
+    .park.available.short-notice-available:hover {
+      transform: translateY(-3px) scale(1.04);
+      background: linear-gradient(135deg, #fde68a, #f59e0b);
+      box-shadow: 0 12px 24px rgba(251, 191, 36, 0.28);
+    }
+
+    .park.available.short-notice-available:active {
+      transform: translateY(0) scale(0.96);
+      box-shadow: 0 5px 12px rgba(251, 191, 36, 0.2);
+    }
+
+    .park.available.disabled {
+      background: var(--green-light);
+      opacity: 1;
+      cursor: default;
+    }
+
+    .park.updating {
+      pointer-events: none;
+      cursor: wait;
+      opacity: 0.82;
+    }
+
+    .park.updating::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: inherit;
+      border: 2px solid rgba(37, 99, 235, 0.25);
+      animation: updatingPulse 900ms ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes updatingPulse {
+      0%, 100% {
+        opacity: 0.25;
+        transform: scale(0.98);
+      }
+      50% {
+        opacity: 0.75;
+        transform: scale(1.04);
+      }
+    }
+
+    .park[role="button"]:focus-visible {
+      outline: 3px solid rgba(56, 189, 248, 0.55);
+      outline-offset: 3px;
+    }
+
+    .park.taken {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .day.weekend .park {
+      background: var(--weekend-inner);
+      border-color: #aeb8c7;
+      color: var(--text);
+    }
+
+    .day.weekend .park .park-no,
+    .day.weekend .park .park-state {
+      color: var(--text);
+    }
+
+    .park-no {
+      font-weight: 800;
+      font-size: 1.4rem;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .park-state {
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.05;
+      font-weight: 450;
+      word-break: break-word;
+      max-width: 86%;
+    }
+
+    .park-state.taken-name {
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 550;
+      line-height: 1.05;
+      max-width: 100%;
+      text-align: center;
+      word-break: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .taken-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .park-remove-btn {
+      position: absolute;
+      left: 85.4%;
+      top: 85.4%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 0.78rem;
+      line-height: 1;
+      border-radius: 999px;
+      box-shadow: 0 6px 12px rgba(239, 68, 68, 0.24);
+      z-index: 4;
+    }
+
+    .park-remove-btn:hover {
+      transform: translate(-50%, calc(-50% - 1px));
+    }
+
+    .park-remove-btn:active {
+      transform: translate(-50%, -50%) scale(0.96);
+    }
+
+    .remove-x {
+      display: block;
+      line-height: 1;
+      transform: translateY(-1px);
+    }
+
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 0;
+      background: #fff;
+      color: var(--text);
+      width: min(430px, calc(100vw - 28px));
+      box-shadow: var(--shadow);
+    }
+
+    dialog::backdrop {
+      background: rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      margin: 0;
+    }
+
+    .modal-copy {
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .owner-warning {
+      display: none;
+      color: #dc2626;
+      background: rgba(239, 68, 68, 0.10);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.94rem;
+      line-height: 1.35;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .owner-warning.visible {
+      display: block;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .name-gate {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(248, 250, 252, 0.55);
+      z-index: 20;
+    }
+
+    .name-gate.visible { display: flex; }
+
+    .name-gate-card {
+      width: min(430px, 100%);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .name-gate-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.24rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 70px;
+      max-width: 380px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #0f172a;
+      color: #fff;
+      box-shadow: var(--shadow);
+      font-weight: 700;
+      transform: translateY(18px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 180ms ease;
+      z-index: 30;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+
+
+    textarea {
+      min-height: 118px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .fab-stack {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 24;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .bug-fab {
+      position: static;
+      background: #0f172a;
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .bug-sidebar-shell {
+      position: fixed;
+      inset: 0;
+      display: none;
+      justify-content: flex-end;
+      background: rgba(15, 23, 42, 0.28);
+      z-index: 28;
+    }
+
+    .bug-sidebar-shell.visible {
+      display: flex;
+    }
+
+    .bug-sidebar {
+      width: min(460px, calc(100vw - 22px));
+      height: 100%;
+      background: #fff;
+      border-left: 1px solid var(--line);
+      box-shadow: -14px 0 34px rgba(15, 23, 42, 0.15);
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .bug-sidebar-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .bug-sidebar-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+    }
+
+    .bug-close-btn {
+      padding: 6px 10px;
+      border-radius: 10px;
+    }
+
+    .log-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .log-tab {
+      padding: 9px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 750;
+      box-shadow: none;
+    }
+
+    .log-tab.active {
+      background: #0f172a;
+      border-color: #0f172a;
+      color: #ffffff;
+    }
+
+    .log-tab:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(15, 23, 42, 0.10);
+    }
+
+    .bug-list {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .bug-group {
+      display: contents;
+    }
+
+    .bug-group-name {
+      display: none;
+    }
+
+    .bug-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #f8fafc;
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .bug-item-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 760;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .bug-item-details {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    .bug-item-meta,
+    .bug-empty {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .bug-form {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .bug-form-row {
+      display: grid;
+      gap: 5px;
+    }
+
+
+    @media (max-width: 860px) {
+      .top-strip {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .days {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+      }
+
+      .week-nav {
+        grid-template-columns: 1fr;
+      }
+
+      .week-center {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 620px) {
+      body { padding: 8px; }
+      h1 { font-size: 1.6rem; }
+      .subtitle { display: none; }
+      .hero { gap: 8px; margin-bottom: 10px; }
+      .booking-card {
+        width: 100%;
+        padding: 8px;
+        gap: 8px;
+      }
+      .top-strip {
+        gap: 8px;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "status allowance"
+          "name name"
+          "notice notice";
+      }
+      .top-strip .compact-card:nth-child(1) {
+        text-align: center;
+        justify-items: center;
+      }
+      .top-strip .compact-card:nth-child(2) {
+        grid-area: name;
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-self: stretch;
+      }
+      .top-strip .compact-card:nth-child(3) {
+        text-align: center;
+        justify-items: center;
+      }
+      .top-strip .compact-card:nth-child(4) {
+        grid-area: notice;
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-self: stretch;
+      }
+      .short-notice-info-card {
+        min-height: auto;
+        padding: 8px 10px;
+      }
+      .short-notice-info-text {
+        font-size: 0.78rem;
+        line-height: 1.25;
+      }
+      .allowance-week { display: none; }
+      .token { font-size: 0.92rem; }
+      .compact-card {
+        padding: 6px 8px;
+        min-height: 66px;
+        align-content: center;
+        gap: 4px;
+      }
+      .status-line {
+        justify-content: center;
+        font-size: 0.84rem;
+        gap: 5px;
+        line-height: 1.05;
+      }
+      .status-badge { font-size: 0.68rem; padding: 2px 7px; }
+      .small-label,
+      .name-label {
+        font-size: 0.62rem;
+        letter-spacing: 0.12em;
+      }
+      .week-nav {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        grid-template-areas:
+          "center center"
+          "prev next";
+      }
+      #prevWeekBtn { grid-area: prev; }
+      #nextWeekBtn { grid-area: next; }
+      .week-center { grid-area: center; flex-direction: column; }
+      .week-range,
+      .week-context { font-size: 1.02rem; }
+      .today-panel {
+        width: 100%;
+        padding: 7px 10px;
+        gap: 3px;
+        border-radius: 14px;
+      }
+      .today-main {
+        flex-direction: row;
+        gap: 8px;
+      }
+      .today-label { font-size: 0.9rem; }
+      #freeTodayBtn {
+        padding: 7px 14px;
+        font-size: 0.86rem;
+      }
+      .name-row {
+        width: 100%;
+        grid-template-columns: minmax(130px, 44%) auto minmax(0, 1fr);
+        gap: 6px;
+      }
+      .add-user-btn {
+        padding: 8px 9px;
+        font-size: 0.76rem;
+      }
+
+      #userSelect {
+        min-width: 0;
+      }
+      .presence-line {
+        align-self: center;
+        gap: 4px;
+      }
+      .presence-label {
+        display: inline-flex;
+        font-size: 0.72rem;
+        font-weight: 650;
+      }
+      .presence-chip {
+        padding: 4px 7px;
+        min-height: 24px;
+        font-size: 0.72rem;
+        font-weight: 400;
+      }
+      .allowance-card {
+        align-content: center;
+      }
+      .days {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        justify-content: stretch;
+        gap: 5px;
+      }
+      .day.weekend { display: none; }
+      .day.weekend.mobile-today-reveal {
+        display: grid;
+        grid-column: 1 / -1;
+        width: min(170px, 100%);
+        justify-self: center;
+      }
+      .day {
+        width: auto;
+        padding: 5px 3px;
+        gap: 5px;
+        border-radius: 10px;
+      }
+      .day-name { font-size: 0.72rem; }
+      .date { font-size: 0.72rem; }
+      .day-name-full { display: none; }
+      .day-name-short { display: inline; }
+      .park {
+        width: 55px;
+        height: 55px;
+        padding: 4px 2px;
+        gap: 1px;
+      }
+      .park-word { display: none; }
+      .park-no { font-size: 1.08rem; font-weight: 800; }
+      .park-state { font-size: 0.64rem; font-weight: 450; }
+      .park-state.taken-name { font-size: 0.62rem; font-weight: 700; }
+      .park-remove-btn {
+        top: 85.4%;
+        left: 85.4%;
+        bottom: auto;
+        width: 14px;
+        height: 14px;
+        min-width: 14px;
+        font-size: 0.56rem;
+      }
+
+      .remove-x {
+        transform: translateY(-0.75px);
+      }
+      #prevWeekBtn,
+      #nextWeekBtn {
+        width: 100%;
+        padding: 8px 8px;
+        font-size: 0.86rem;
+      }
+      .jump-btn {
+        padding: 8px 16px;
+        font-size: 0.86rem;
+      }
+      .fab-stack {
+        right: 10px;
+        bottom: 10px;
+        gap: 6px;
+      }
+
+      .bug-fab {
+        padding: 8px 12px;
+        font-size: 0.82rem;
+      }
+      .bug-sidebar {
+        width: 100%;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="app" class="app locked">
+    <section class="hero">
+      <div class="title-block">
+        <h1>Carpark Booking System</h1>
+        <p class="subtitle">Select your name, choose an available space, and manage weekly bookings.</p>
+      </div>
+
+      <div class="top-strip">
+        <aside class="panel compact-card">
+          <p class="small-label">Week Status</p>
+          <div id="statusBox"></div>
+        </aside>
+
+        <aside class="panel compact-card">
+          <label for="userSelect" class="name-label">Select your name</label>
+          <div class="name-row">
+            <select id="userSelect"></select>
+            <button id="addUserBtn" class="ghost add-user-btn" type="button">Add name</button>
+            <div id="presenceLine" class="presence-line">Locked</div>
+          </div>
+        </aside>
+
+        <aside class="panel compact-card allowance-card">
+          <p class="small-label">Weekly Allowance</p>
+          <p id="allowanceWeek" class="allowance-week">Loading...</p>
+          <p id="tokenText" class="token">Loading...</p>
+        </aside>
+
+        <aside class="panel compact-card short-notice-info-card" aria-label="Short notice booking rule">
+          <p class="short-notice-info-text">No weekly allowance used for short-notice bookings. (Same day or 9pm the night before)</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel booking-card">
+      <div class="week-nav">
+        <button id="prevWeekBtn" class="ghost">← Previous Week</button>
+
+        <div class="week-center">
+          <div class="week-meta">
+            <div id="weekRange" class="week-range"></div>
+            <div id="weekContext" class="week-context"></div>
+          </div>
+          <button id="jumpThisWeekBtn" class="ghost jump-btn">Jump to Today</button>
+        </div>
+
+        <button id="nextWeekBtn" class="ghost">Next Week →</button>
+      </div>
+
+      <div id="todayPanel" class="today-panel">
+        <div class="today-main">
+          <span id="shortNoticeLabel" class="today-label">Short Notice Booking:</span>
+          <button id="freeTodayBtn" class="gold">Claim</button>
+        </div>
+      </div>
+
+      <div id="daysGrid" class="days"></div>
+    </section>
+  </main>
+
+  <section id="authGate" class="name-gate visible" aria-modal="true" role="dialog">
+    <div class="name-gate-card">
+      <div id="authValidationView" class="auth-view">
+        <div>
+          <p class="small-label">Private access</p>
+          <h2 class="name-gate-title">Validating authentication</h2>
+        </div>
+
+        <p class="modal-copy">Checking whether this browser is already signed in.</p>
+        <p id="authStatusText" class="auth-status">Checking saved login...</p>
+      </div>
+
+      <div id="authLoginView" class="auth-view hidden">
+        <div>
+          <p class="small-label">Private access</p>
+          <h2 class="name-gate-title">Enter access PIN</h2>
+        </div>
+
+        <p class="modal-copy">Enter the shared internal PIN/password. This is checked by Firebase Authentication and is not stored in this HTML file.</p>
+
+        <div>
+          <label for="pinInput">PIN / password</label>
+          <input id="pinInput" type="password" autocomplete="current-password" />
+        </div>
+
+        <p id="pinError" class="gate-error"></p>
+        <button id="unlockBtn" class="primary">Unlock</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="nameGate" class="name-gate" aria-modal="true" role="dialog">
+    <div class="name-gate-card">
+      <div>
+        <p class="small-label">Before you start</p>
+        <h2 class="name-gate-title">Select your name</h2>
+      </div>
+
+      <p class="modal-copy">Your selection will be stored in this browser so the site can remember you next time.</p>
+
+      <div>
+        <label for="gateUserSelect">Your name</label>
+        <div class="name-row">
+          <select id="gateUserSelect"></select>
+          <button id="gateAddUserBtn" class="ghost add-user-btn" type="button">Add name</button>
+          <div></div>
+        </div>
+      </div>
+
+      <button id="confirmNameBtn" class="primary">Continue</button>
+    </div>
+  </section>
+
+  <dialog id="addUserDialog">
+    <form method="dialog" class="modal-content">
+      <div>
+        <p class="small-label">Add private user</p>
+        <h3 class="modal-title">Add name</h3>
+      </div>
+
+      <div>
+        <label for="newUserName">Name</label>
+        <input id="newUserName" type="text" autocomplete="off" />
+      </div>
+
+      <p class="modal-copy">Weekly allowance is fixed at 1 booking per week.</p>
+
+      <p id="addUserError" class="gate-error"></p>
+
+      <div class="modal-actions">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button id="confirmAddUserBtn" value="default" class="primary">Add name</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="freeDialog">
+    <form method="dialog" class="modal-content">
+      <div>
+        <p class="small-label">Choose available carpark</p>
+        <h3 id="shortNoticeDialogTitle" class="modal-title">Short Notice Booking</h3>
+      </div>
+
+      <div>
+        <label id="shortNoticeSelectLabel" for="freeParkSelect">Available carparks</label>
+        <select id="freeParkSelect"></select>
+      </div>
+
+      <div class="modal-actions">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button id="confirmFreeBtn" value="default" class="gold">Claim</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="removeDialog">
+    <form method="dialog" class="modal-content">
+      <div>
+        <p class="small-label">Confirm removal</p>
+        <h3 class="modal-title">Remove carpark claim?</h3>
+      </div>
+
+      <p id="removeDialogText" class="modal-copy"></p>
+      <p id="removeWarningText" class="owner-warning"></p>
+
+      <div class="modal-actions">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button id="confirmRemoveBtn" value="default" class="danger">Remove Claim</button>
+      </div>
+    </form>
+  </dialog>
+
+
+
+  <div class="fab-stack" aria-label="Quick actions">
+    <button id="bugOpenBtn" class="bug-fab" type="button">Report bug</button>
+    <button id="logOpenBtn" class="bug-fab log-fab" type="button">Booking log</button>
+  </div>
+
+  <section id="bugSidebarShell" class="bug-sidebar-shell" aria-modal="true" role="dialog" aria-labelledby="bugSidebarTitle">
+    <aside class="bug-sidebar">
+      <div class="bug-sidebar-header">
+        <div>
+          <p class="small-label">Add-only log</p>
+          <h2 id="bugSidebarTitle" class="bug-sidebar-title">Reported bugs</h2>
+        </div>
+        <button id="bugCloseBtn" class="ghost bug-close-btn" type="button">Close</button>
+      </div>
+
+      <div id="bugList" class="bug-list">
+        <p class="bug-empty">Loading bug reports...</p>
+      </div>
+
+      <form id="bugForm" class="bug-form">
+        <div>
+          <p class="small-label">Report bug</p>
+        </div>
+
+        <div class="bug-form-row">
+          <label for="bugTitleInput">Bug summary</label>
+          <input id="bugTitleInput" type="text" maxlength="100" autocomplete="off" placeholder="Example: Cannot claim carpark on mobile" />
+        </div>
+
+        <div class="bug-form-row">
+          <label for="bugDetailsInput">Details</label>
+          <textarea id="bugDetailsInput" maxlength="900" placeholder="What happened, what you expected, and any steps to repeat it"></textarea>
+        </div>
+
+        <p id="bugError" class="gate-error"></p>
+        <button id="bugSubmitBtn" class="primary" type="submit">Add bug report</button>
+      </form>
+    </aside>
+  </section>
+
+  <section id="logSidebarShell" class="bug-sidebar-shell" aria-modal="true" role="dialog" aria-labelledby="logSidebarTitle">
+    <aside class="bug-sidebar">
+      <div class="bug-sidebar-header">
+        <div>
+          <p class="small-label">Add-only log</p>
+          <h2 id="logSidebarTitle" class="bug-sidebar-title">Booking log</h2>
+        </div>
+        <button id="logCloseBtn" class="ghost bug-close-btn" type="button">Close</button>
+      </div>
+
+      <div class="log-tabs" role="tablist" aria-label="Booking log categories">
+        <button id="logActivityTab" class="log-tab active" type="button" role="tab" aria-selected="true">Activity</button>
+        <button id="logBookingsTab" class="log-tab" type="button" role="tab" aria-selected="false">Bookings</button>
+      </div>
+
+      <div id="logList" class="bug-list">
+        <p class="bug-empty">Loading booking log...</p>
+      </div>
+    </aside>
+  </section>
+
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    /************************************************************
+     * EDITABLE APP / FIREBASE SETTINGS
+     * Keep future Firebase, login, carpark and token edits here.
+     ************************************************************/
+    const FIREBASE_SDK_VERSION = "10.12.5";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzFhhlF2UmbKnyIe4Vr9kj93BKnJK7qtI",
+      authDomain: "carpark-booking-583cc.firebaseapp.com",
+      projectId: "carpark-booking-583cc",
+      storageBucket: "carpark-booking-583cc.firebasestorage.app",
+      messagingSenderId: "253260648727",
+      appId: "1:253260648727:web:6be9941a57240e37996752",
+      databaseURL: "https://carpark-booking-583cc-default-rtdb.firebaseio.com/"
+    };
+
+    // IMPORTANT: change this to the email address you created in Firebase Authentication.
+    // The shared PIN/password is NOT stored here. Users type it into the unlock screen.
+    const SHARED_LOGIN_EMAIL = "carpark@email.com";
+
+    const CARPARKS = ["64", "65", "126"];
+    const DEFAULT_WEEKLY_TOKENS = 1;
+    const USER_COOKIE = "carpark_selected_user_id_v5";
+    const USER_STORAGE_KEY = "carpark_selected_user_id_v5";
+    const BROWSER_ID_KEY = "carpark_browser_id_v1";
+    const BUG_REPORTS_COLLECTION = "bugReports";
+    const BOOKING_LOG_COLLECTION = "bookingLogs";
+    const DAILY_BOOKING_CUTOFF_HOUR = 17;
+    const SHORT_NOTICE_TOMORROW_START_HOUR = 21;
+    const SHORT_NOTICE_BOOKING_MODE = "short-notice";
+    const RECENT_LIST_LIMIT = 50;
+    const PRESENCE_ACTIVE_MS = 2 * 60 * 1000;
+    const PRESENCE_HEARTBEAT_MS = 25 * 1000;
+    const BOOKING_SNAPSHOT_HOLD_MS = 1400;
+
+    /************************************************************
+     * APP STATE
+     ************************************************************/
+    let USERS = [];
+    let usersById = new Map();
+
+    const els = {
+      app: document.querySelector("#app"),
+      authGate: document.querySelector("#authGate"),
+      authValidationView: document.querySelector("#authValidationView"),
+      authLoginView: document.querySelector("#authLoginView"),
+      authStatusText: document.querySelector("#authStatusText"),
+      pinInput: document.querySelector("#pinInput"),
+      pinError: document.querySelector("#pinError"),
+      unlockBtn: document.querySelector("#unlockBtn"),
+      nameGate: document.querySelector("#nameGate"),
+      gateUserSelect: document.querySelector("#gateUserSelect"),
+      gateAddUserBtn: document.querySelector("#gateAddUserBtn"),
+      confirmNameBtn: document.querySelector("#confirmNameBtn"),
+      addUserBtn: document.querySelector("#addUserBtn"),
+      addUserDialog: document.querySelector("#addUserDialog"),
+      newUserName: document.querySelector("#newUserName"),
+      addUserError: document.querySelector("#addUserError"),
+      confirmAddUserBtn: document.querySelector("#confirmAddUserBtn"),
+      statusBox: document.querySelector("#statusBox"),
+      userSelect: document.querySelector("#userSelect"),
+      presenceLine: document.querySelector("#presenceLine"),
+      allowanceWeek: document.querySelector("#allowanceWeek"),
+      tokenText: document.querySelector("#tokenText"),
+      prevWeekBtn: document.querySelector("#prevWeekBtn"),
+      nextWeekBtn: document.querySelector("#nextWeekBtn"),
+      jumpThisWeekBtn: document.querySelector("#jumpThisWeekBtn"),
+      weekRange: document.querySelector("#weekRange"),
+      weekContext: document.querySelector("#weekContext"),
+      todayPanel: document.querySelector("#todayPanel"),
+      shortNoticeLabel: document.querySelector("#shortNoticeLabel"),
+      shortNoticeDialogTitle: document.querySelector("#shortNoticeDialogTitle"),
+      shortNoticeSelectLabel: document.querySelector("#shortNoticeSelectLabel"),
+      freeTodayBtn: document.querySelector("#freeTodayBtn"),
+      freeDialog: document.querySelector("#freeDialog"),
+      freeParkSelect: document.querySelector("#freeParkSelect"),
+      confirmFreeBtn: document.querySelector("#confirmFreeBtn"),
+      removeDialog: document.querySelector("#removeDialog"),
+      removeDialogText: document.querySelector("#removeDialogText"),
+      removeWarningText: document.querySelector("#removeWarningText"),
+      confirmRemoveBtn: document.querySelector("#confirmRemoveBtn"),
+      bugOpenBtn: document.querySelector("#bugOpenBtn"),
+      bugSidebarShell: document.querySelector("#bugSidebarShell"),
+      bugCloseBtn: document.querySelector("#bugCloseBtn"),
+      bugList: document.querySelector("#bugList"),
+      bugForm: document.querySelector("#bugForm"),
+      bugTitleInput: document.querySelector("#bugTitleInput"),
+      bugDetailsInput: document.querySelector("#bugDetailsInput"),
+      bugError: document.querySelector("#bugError"),
+      bugSubmitBtn: document.querySelector("#bugSubmitBtn"),
+      logOpenBtn: document.querySelector("#logOpenBtn"),
+      logSidebarShell: document.querySelector("#logSidebarShell"),
+      logCloseBtn: document.querySelector("#logCloseBtn"),
+      logActivityTab: document.querySelector("#logActivityTab"),
+      logBookingsTab: document.querySelector("#logBookingsTab"),
+      logList: document.querySelector("#logList"),
+      daysGrid: document.querySelector("#daysGrid"),
+      toast: document.querySelector("#toast")
+    };
+
+    let bookings = {};
+    let bugReports = [];
+    let bookingLogs = [];
+    let weekOffset = 0;
+    let pendingRemoval = null;
+    let usingFirebase = false;
+    let isAuthenticated = false;
+    let authApi = null;
+    let firestoreApi = null;
+    let realtimeApi = null;
+    let unsubscribeBookings = null;
+    let unsubscribeBugReports = null;
+    let unsubscribeBookingLogs = null;
+    let unsubscribePresence = null;
+    let currentPresenceRef = null;
+    let presenceHeartbeatInterval = null;
+    let weekTimerInterval = null;
+    let pendingBookingCells = new Map();
+    let bookingSnapshotHoldUntil = 0;
+    let blinkTodayAfterRender = false;
+    let currentSelectedUserId = "";
+    let loggedLoginForUserId = "";
+    let activeLogTab = "activity";
+    let pendingShortNoticeDateKey = "";
+
+    init();
+
+    async function init() {
+      wireEvents();
+      openAuthGate("validating");
+      await setupFirebase();
+
+      if (!usingFirebase || !authApi) {
+        els.authStatusText.textContent = "Firebase could not load.";
+        els.pinError.textContent = "Firebase could not load. Check your Firebase config and internet connection.";
+        els.unlockBtn.disabled = true;
+        renderPresence([]);
+        openAuthGate("login");
+        return;
+      }
+
+      authApi.onAuthStateChanged(authApi.auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          isAuthenticated = true;
+          await finishUnlock();
+        } else {
+          isAuthenticated = false;
+          await lockApp({ authMode: "login" });
+        }
+      });
+    }
+
+    async function setupFirebase() {
+      const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
+      if (!hasFirebaseConfig) return;
+
+      try {
+        const { initializeApp } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`);
+        const {
+          getAuth,
+          signInWithEmailAndPassword,
+          onAuthStateChanged,
+          setPersistence,
+          browserLocalPersistence
+        } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-auth.js`);
+        const {
+          getFirestore,
+          doc,
+          collection,
+          getDocs,
+          onSnapshot,
+          query,
+          orderBy,
+          limit,
+          setDoc,
+          addDoc,
+          runTransaction,
+          serverTimestamp: firestoreServerTimestamp
+        } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`);
+        const {
+          getDatabase,
+          ref,
+          set,
+          onValue,
+          onDisconnect,
+          serverTimestamp,
+          remove,
+          update
+        } = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-database.js`);
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        await setPersistence(auth, browserLocalPersistence);
+
+        authApi = {
+          auth,
+          signInWithEmailAndPassword,
+          onAuthStateChanged
+        };
+
+        firestoreApi = {
+          db: getFirestore(app),
+          doc,
+          collection,
+          getDocs,
+          onSnapshot,
+          query,
+          orderBy,
+          limit,
+          setDoc,
+          addDoc,
+          runTransaction,
+          serverTimestamp: firestoreServerTimestamp
+        };
+
+        realtimeApi = {
+          db: getDatabase(app),
+          ref,
+          set,
+          onValue,
+          onDisconnect,
+          serverTimestamp,
+          remove,
+          update
+        };
+
+        usingFirebase = true;
+      } catch (error) {
+        console.error(error);
+        usingFirebase = false;
+      }
+    }
+
+    async function unlockWithPin() {
+      const password = els.pinInput.value.trim();
+
+      if (!password) {
+        els.pinError.textContent = "Enter the shared PIN/password.";
+        return;
+      }
+
+      els.unlockBtn.disabled = true;
+      els.pinError.textContent = "Checking...";
+
+      try {
+        await authApi.signInWithEmailAndPassword(authApi.auth, SHARED_LOGIN_EMAIL, password);
+        els.pinInput.value = "";
+        els.pinError.textContent = "";
+      } catch (error) {
+        console.error(error);
+        els.pinError.textContent = "Incorrect PIN/password, or the Firebase access account email does not match this HTML file.";
+      } finally {
+        els.unlockBtn.disabled = false;
+      }
+    }
+
+    async function finishUnlock() {
+      closeAuthGate();
+      await loadUsers();
+      populateUserSelects();
+      loadUserFromSavedSelection();
+      await loadBookings();
+      startPresence();
+      await maybeLogLogin();
+      render();
+    }
+
+    async function lockApp({ authMode = "login" } = {}) {
+      await clearCurrentPresence();
+      unsubscribeBookings?.();
+      unsubscribeBugReports?.();
+      unsubscribeBookingLogs?.();
+      unsubscribePresence?.();
+      unsubscribeBookings = null;
+      unsubscribeBugReports = null;
+      unsubscribeBookingLogs = null;
+      unsubscribePresence = null;
+      bookings = {};
+      bugReports = [];
+      bookingLogs = [];
+      if (els.bugList) els.bugList.innerHTML = `<p class="bug-empty">Open Report bug to load latest reports.</p>`;
+      if (els.logList) els.logList.innerHTML = `<p class="bug-empty">Open Booking log to load latest entries.</p>`;
+      pendingBookingCells.clear();
+      currentSelectedUserId = "";
+      loggedLoginForUserId = "";
+      USERS = [];
+      usersById = new Map();
+      populateUserSelects();
+      renderPresence([]);
+      els.tokenText.textContent = "Locked";
+      els.daysGrid.innerHTML = "";
+      openAuthGate(authMode);
+    }
+
+    async function loadUsers() {
+      const usersRef = firestoreApi.collection(firestoreApi.db, "users");
+      const snap = await firestoreApi.getDocs(usersRef);
+
+      USERS = snap.docs
+        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter(user => user.active !== false)
+        .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+
+      usersById = new Map(USERS.map(user => [user.id, user]));
+    }
+
+    function populateUserSelects() {
+      const options =
+        `<option value="">Select name...</option>` +
+        USERS.map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`).join("");
+
+      els.userSelect.innerHTML = options;
+      els.gateUserSelect.innerHTML = options;
+    }
+
+    function loadUserFromSavedSelection() {
+      const savedUserId = getSavedSelectedUserId();
+      const valid = savedUserId && USERS.some(user => user.id === savedUserId);
+
+      if (valid) {
+        els.userSelect.value = savedUserId;
+        els.gateUserSelect.value = savedUserId;
+        currentSelectedUserId = savedUserId;
+        closeNameGate();
+      } else {
+        els.userSelect.value = "";
+        els.gateUserSelect.value = "";
+        currentSelectedUserId = "";
+        openNameGate();
+      }
+    }
+
+    function wireEvents() {
+      els.unlockBtn.addEventListener("click", unlockWithPin);
+      els.pinInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") unlockWithPin();
+      });
+
+      els.userSelect.addEventListener("change", async () => {
+        const previousUser = currentSelectedUserId ? usersById.get(currentSelectedUserId) : null;
+        await clearCurrentPresence();
+
+        if (!els.userSelect.value) {
+          clearSavedSelectedUserId();
+          currentSelectedUserId = "";
+          openNameGate();
+          render();
+          return;
+        }
+
+        const nextUser = usersById.get(els.userSelect.value) || null;
+        saveSelectedUserId(els.userSelect.value);
+        currentSelectedUserId = els.userSelect.value;
+        els.gateUserSelect.value = els.userSelect.value;
+        startPresence();
+        const didSwitch = await logNameSwitch(previousUser, nextUser);
+        if (!didSwitch) await maybeLogLogin();
+        render();
+      });
+
+      els.confirmNameBtn.addEventListener("click", async () => {
+        if (!els.gateUserSelect.value) {
+          showToast("Select your name first.");
+          return;
+        }
+
+        const previousUser = currentSelectedUserId ? usersById.get(currentSelectedUserId) : null;
+        const nextUser = usersById.get(els.gateUserSelect.value) || null;
+
+        saveSelectedUserId(els.gateUserSelect.value);
+        currentSelectedUserId = els.gateUserSelect.value;
+        els.userSelect.value = els.gateUserSelect.value;
+        closeNameGate();
+        startPresence();
+        const didSwitch = await logNameSwitch(previousUser, nextUser);
+        if (!didSwitch) await maybeLogLogin();
+        render();
+      });
+
+      els.addUserBtn.addEventListener("click", openAddUserDialog);
+      els.gateAddUserBtn.addEventListener("click", openAddUserDialog);
+
+      els.confirmAddUserBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        await addUserFromDialog();
+      });
+
+      els.prevWeekBtn.addEventListener("click", () => {
+        weekOffset -= 1;
+        render();
+      });
+
+      els.nextWeekBtn.addEventListener("click", () => {
+        weekOffset += 1;
+        render();
+      });
+
+      els.jumpThisWeekBtn.addEventListener("click", () => {
+        weekOffset = 0;
+        blinkTodayAfterRender = true;
+        render();
+      });
+
+      els.freeTodayBtn.addEventListener("click", openShortNoticeDialog);
+      els.bugOpenBtn.addEventListener("click", openBugSidebar);
+      els.bugCloseBtn.addEventListener("click", closeBugSidebar);
+      els.bugSidebarShell.addEventListener("click", (event) => {
+        if (event.target === els.bugSidebarShell) closeBugSidebar();
+      });
+      els.bugForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await addBugReport();
+      });
+
+      els.logOpenBtn.addEventListener("click", openLogSidebar);
+      els.logCloseBtn.addEventListener("click", closeLogSidebar);
+      els.logActivityTab.addEventListener("click", () => setLogTab("activity"));
+      els.logBookingsTab.addEventListener("click", () => setLogTab("bookings"));
+      els.logSidebarShell.addEventListener("click", (event) => {
+        if (event.target === els.logSidebarShell) closeLogSidebar();
+      });
+
+      els.confirmFreeBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const carpark = els.freeParkSelect.value;
+        const dateKey = pendingShortNoticeDateKey || els.freeParkSelect.dataset.dateKey || getDateKey(new Date());
+        if (!carpark) return;
+        await claimCarpark(dateKey, carpark);
+        pendingShortNoticeDateKey = "";
+        els.freeDialog.close();
+      });
+
+      els.confirmRemoveBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (!pendingRemoval) return;
+        await removeCarparkClaim(pendingRemoval.dateKey, pendingRemoval.carpark);
+        pendingRemoval = null;
+        els.removeDialog.close();
+      });
+
+      window.addEventListener("resize", render);
+      window.addEventListener("pagehide", clearCurrentPresence);
+      window.addEventListener("beforeunload", clearCurrentPresence);
+    }
+
+    function openAddUserDialog() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      els.newUserName.value = "";
+      els.addUserError.textContent = "";
+      els.addUserDialog.showModal();
+      setTimeout(() => els.newUserName.focus(), 0);
+    }
+
+    async function addUserFromDialog() {
+      const name = els.newUserName.value.trim();
+      const weeklyTokens = DEFAULT_WEEKLY_TOKENS;
+
+      if (!name) {
+        els.addUserError.textContent = "Enter a name.";
+        return;
+      }
+
+      const userId = makeUserId(name);
+      const userRef = firestoreApi.doc(firestoreApi.db, "users", userId);
+
+      try {
+        await firestoreApi.setDoc(userRef, {
+          name,
+          weeklyTokens,
+          active: true
+        });
+
+        await loadUsers();
+        populateUserSelects();
+        const previousUser = currentSelectedUserId ? usersById.get(currentSelectedUserId) : null;
+        const nextUser = usersById.get(userId) || { id: userId, name };
+
+        saveSelectedUserId(userId);
+        currentSelectedUserId = userId;
+        els.userSelect.value = userId;
+        els.gateUserSelect.value = userId;
+        closeNameGate();
+        els.addUserDialog.close();
+        startPresence();
+        const didSwitch = await logNameSwitch(previousUser, nextUser);
+        if (!didSwitch) await maybeLogLogin();
+        render();
+        showToast(`${name} added.`);
+      } catch (error) {
+        console.error(error);
+        els.addUserError.textContent = "Could not add name. Check Firestore rules.";
+      }
+    }
+
+    async function loadBookings() {
+      const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
+      unsubscribeBookings?.();
+
+      unsubscribeBookings = firestoreApi.onSnapshot(docRef, (snap) => {
+        const incomingBookings = snap.exists() ? snap.data().bookings || {} : {};
+
+        if (Date.now() < bookingSnapshotHoldUntil && !sameBookings(incomingBookings, bookings)) {
+          return;
+        }
+
+        bookings = incomingBookings;
+        render();
+      }, (error) => {
+        console.error(error);
+        showToast("Live booking updates could not connect.");
+      });
+    }
+
+
+
+    async function loadBugReports() {
+      const reportsRef = firestoreApi.collection(firestoreApi.db, BUG_REPORTS_COLLECTION);
+      const recentReportsQuery = firestoreApi.query(
+        reportsRef,
+        firestoreApi.orderBy("createdAtLocal", "desc"),
+        firestoreApi.limit(RECENT_LIST_LIMIT)
+      );
+
+      unsubscribeBugReports?.();
+
+      unsubscribeBugReports = firestoreApi.onSnapshot(recentReportsQuery, (snap) => {
+        bugReports = snap.docs
+          .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+          .sort((a, b) => getBugTime(b) - getBugTime(a));
+        renderBugReports();
+      }, (error) => {
+        console.error(error);
+        els.bugList.innerHTML = `<p class="bug-empty">Bug reports could not load. Check Firestore rules.</p>`;
+      });
+    }
+
+    async function addBugReport() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      const user = getSelectedUser();
+      if (!user) {
+        openNameGate();
+        showToast("Select your name first.");
+        return;
+      }
+
+      const title = els.bugTitleInput.value.trim();
+      const details = els.bugDetailsInput.value.trim();
+
+      if (!title) {
+        els.bugError.textContent = "Enter a bug summary.";
+        return;
+      }
+
+      els.bugSubmitBtn.disabled = true;
+      els.bugError.textContent = "Saving...";
+
+      try {
+        await firestoreApi.addDoc(firestoreApi.collection(firestoreApi.db, BUG_REPORTS_COLLECTION), {
+          reporterName: user.name,
+          reporterUserId: user.id,
+          title,
+          details,
+          status: "open",
+          createdAt: firestoreApi.serverTimestamp(),
+          createdAtLocal: new Date().toISOString(),
+          page: location.pathname || "carpark-booking"
+        });
+
+        els.bugTitleInput.value = "";
+        els.bugDetailsInput.value = "";
+        els.bugError.textContent = "";
+        showToast("Bug report added.");
+      } catch (error) {
+        console.error(error);
+        els.bugError.textContent = "Could not add bug report. Check Firestore rules.";
+      } finally {
+        els.bugSubmitBtn.disabled = false;
+      }
+    }
+
+    async function openBugSidebar() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      if (!getSelectedUser()) {
+        openNameGate();
+        showToast("Select your name first.");
+        return;
+      }
+
+      if (!unsubscribeBugReports) {
+        els.bugList.innerHTML = `<p class="bug-empty">Loading latest ${RECENT_LIST_LIMIT} bug reports...</p>`;
+        await loadBugReports();
+      } else {
+        renderBugReports();
+      }
+
+      els.bugSidebarShell.classList.add("visible");
+      setTimeout(() => els.bugTitleInput.focus(), 0);
+    }
+
+    function closeBugSidebar() {
+      els.bugSidebarShell.classList.remove("visible");
+      els.bugError.textContent = "";
+    }
+
+    function renderBugReports() {
+      if (!els.bugList) return;
+
+      if (!bugReports.length) {
+        els.bugList.innerHTML = `<p class="bug-empty">No bugs reported yet.</p>`;
+        return;
+      }
+
+      els.bugList.innerHTML = bugReports
+        .slice()
+        .sort((a, b) => getBugTime(b) - getBugTime(a))
+        .slice(0, RECENT_LIST_LIMIT)
+        .map(report => {
+          const reporter = report.reporterName || "Unknown";
+          const title = report.title || "Untitled bug";
+          return `
+            <article class="bug-item">
+              <p class="bug-item-title">${escapeHtml(`${reporter} - ${title}`)}</p>
+              ${report.details ? `<p class="bug-item-details">${escapeHtml(report.details)}</p>` : ""}
+              <p class="bug-item-meta">${escapeHtml(formatBugDate(report))}</p>
+            </article>
+          `;
+        }).join("");
+    }
+
+    function getBugTime(report) {
+      if (report?.createdAt?.toDate) return report.createdAt.toDate().getTime();
+      if (report?.createdAtLocal) return new Date(report.createdAtLocal).getTime() || 0;
+      return 0;
+    }
+
+    function formatBugDate(report) {
+      const time = getBugTime(report);
+      if (!time) return "Date unavailable";
+      return new Date(time).toLocaleString(undefined, {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    async function loadBookingLogs() {
+      const logsRef = firestoreApi.collection(firestoreApi.db, BOOKING_LOG_COLLECTION);
+      const recentLogsQuery = firestoreApi.query(
+        logsRef,
+        firestoreApi.orderBy("createdAtLocal", "desc"),
+        firestoreApi.limit(RECENT_LIST_LIMIT)
+      );
+
+      unsubscribeBookingLogs?.();
+
+      unsubscribeBookingLogs = firestoreApi.onSnapshot(recentLogsQuery, (snap) => {
+        bookingLogs = snap.docs
+          .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+          .sort((a, b) => getLogTime(b) - getLogTime(a));
+        renderBookingLogs();
+      }, (error) => {
+        console.error(error);
+        if (els.logList) els.logList.innerHTML = `<p class="bug-empty">Booking log could not load. Check Firestore rules.</p>`;
+      });
+    }
+
+    async function openLogSidebar() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      if (!getSelectedUser()) {
+        openNameGate();
+        showToast("Select your name first.");
+        return;
+      }
+
+      if (!unsubscribeBookingLogs) {
+        els.logList.innerHTML = `<p class="bug-empty">Loading latest ${RECENT_LIST_LIMIT} log entries...</p>`;
+        await loadBookingLogs();
+      } else {
+        renderBookingLogs();
+      }
+
+      els.logSidebarShell.classList.add("visible");
+    }
+
+    function closeLogSidebar() {
+      els.logSidebarShell.classList.remove("visible");
+    }
+
+    function setLogTab(tabName) {
+      activeLogTab = tabName === "bookings" ? "bookings" : "activity";
+
+      els.logActivityTab.classList.toggle("active", activeLogTab === "activity");
+      els.logBookingsTab.classList.toggle("active", activeLogTab === "bookings");
+      els.logActivityTab.setAttribute("aria-selected", activeLogTab === "activity" ? "true" : "false");
+      els.logBookingsTab.setAttribute("aria-selected", activeLogTab === "bookings" ? "true" : "false");
+
+      renderBookingLogs();
+    }
+
+    function renderBookingLogs() {
+      if (!els.logList) return;
+
+      const filteredLogs = bookingLogs
+        .filter(entry => isLogInActiveTab(entry))
+        .sort((a, b) => getLogTime(b) - getLogTime(a));
+
+      if (!filteredLogs.length) {
+        els.logList.innerHTML = `<p class="bug-empty">${activeLogTab === "bookings" ? "No booking changes yet." : "No login or name-change entries yet."}</p>`;
+        return;
+      }
+
+      els.logList.innerHTML = filteredLogs
+        .slice(0, RECENT_LIST_LIMIT)
+        .map(entry => `
+          <article class="bug-item">
+            <p class="bug-item-title">${escapeHtml(getLogTitle(entry))}</p>
+            ${getLogDetails(entry) ? `<p class="bug-item-details">${escapeHtml(getLogDetails(entry))}</p>` : ""}
+            <p class="bug-item-meta">${escapeHtml(formatLogDate(entry))}</p>
+          </article>
+        `).join("");
+    }
+
+    function isLogInActiveTab(entry) {
+      const bookingActions = ["booking-added", "booking-removed"];
+      const isBookingAction = bookingActions.includes(entry.action);
+
+      return activeLogTab === "bookings" ? isBookingAction : !isBookingAction;
+    }
+
+    function getLogTitle(entry) {
+      const actor = entry.actorName || "Unknown";
+      const targetName = entry.targetName || "";
+      const otherPerson = targetName && targetName !== actor;
+
+      switch (entry.action) {
+        case "login":
+          return `${actor} logged in`;
+        case "name-switch":
+          return `${actor} changed name selection`;
+        case "booking-added":
+          return `${actor} booked Carpark ${entry.carpark}`;
+        case "booking-removed":
+          return otherPerson
+            ? `${actor} removed ${targetName}'s Carpark ${entry.carpark}`
+            : `${actor} removed Carpark ${entry.carpark}`;
+        default:
+          return `${actor} - ${entry.action || "log entry"}`;
+      }
+    }
+
+    function getLogDetails(entry) {
+      const dateText = entry.dateDisplay || (entry.dateKey ? formatShortDate(parseDateKey(entry.dateKey)) : "");
+      const tokenText = Number(entry.tokenCost || 0) > 0 ? "1 token" : "no token";
+      const actor = entry.actorName || "";
+      const targetName = entry.targetName || "";
+      const otherPerson = targetName && targetName !== actor;
+      const target = otherPerson ? ` for ${targetName}` : "";
+
+      switch (entry.action) {
+        case "name-switch":
+          return `${entry.previousName || "None"} → ${entry.nextName || "None"}`;
+        case "booking-added":
+          return `${dateText}${target} — ${tokenText}`;
+        case "booking-removed":
+          return otherPerson
+            ? `${dateText} — removed another person's booking — ${tokenText} restored/unchanged`
+            : `${dateText} — ${tokenText} restored/unchanged`;
+        default:
+          return entry.details || "";
+      }
+    }
+
+    function getLogTime(entry) {
+      if (entry?.createdAt?.toDate) return entry.createdAt.toDate().getTime();
+      if (entry?.createdAtLocal) return new Date(entry.createdAtLocal).getTime() || 0;
+      return 0;
+    }
+
+    function formatLogDate(entry) {
+      const time = getLogTime(entry);
+      if (!time) return "Date unavailable";
+      return new Date(time).toLocaleString(undefined, {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    async function addBookingLog(action, details = {}, actorOverride = null) {
+      if (!isAuthenticated || !firestoreApi) return;
+
+      const actor = actorOverride || getSelectedUser();
+      if (!actor) return;
+
+      try {
+        await firestoreApi.addDoc(firestoreApi.collection(firestoreApi.db, BOOKING_LOG_COLLECTION), {
+          action,
+          actorName: actor.name || "Unknown",
+          actorUserId: actor.id || "",
+          ...details,
+          createdAt: firestoreApi.serverTimestamp(),
+          createdAtLocal: new Date().toISOString(),
+          browserId: getBrowserId(),
+          page: location.pathname || "carpark-booking"
+        });
+      } catch (error) {
+        console.warn("Booking log write failed", error);
+      }
+    }
+
+    async function maybeLogLogin() {
+      const user = getSelectedUser();
+      if (!user || loggedLoginForUserId === user.id) return;
+
+      loggedLoginForUserId = user.id;
+      await addBookingLog("login", {}, user);
+    }
+
+    async function logNameSwitch(previousUser, nextUser) {
+      if (!nextUser) return false;
+      if (!previousUser || previousUser.id === nextUser.id) return false;
+
+      await addBookingLog("name-switch", {
+        previousName: previousUser.name || "",
+        previousUserId: previousUser.id || "",
+        nextName: nextUser.name || "",
+        nextUserId: nextUser.id || ""
+      }, nextUser);
+
+      return true;
+    }
+
+
+    async function claimCarpark(dateKey, carpark) {
+      const user = getSelectedUser();
+      const requestedDate = parseDateKey(dateKey);
+      const costsToken = !isShortNoticeBookingDate(requestedDate);
+      const key = getCellKey(dateKey, carpark);
+
+      if (hasPendingCell(dateKey, carpark)) {
+        showToast("That carpark is still updating.");
+        return false;
+      }
+
+      if (!isAuthenticated) {
+        openAuthGate();
+        return false;
+      }
+
+      if (!user) {
+        openNameGate();
+        showToast("Select your name first.");
+        return false;
+      }
+
+      if (isPastDailyCutoffForDate(requestedDate)) {
+        showToast("Bookings close at 5:00 pm for that day.");
+        return false;
+      }
+
+      if (!canBookDate(requestedDate)) {
+        showToast("That week is closed.");
+        return false;
+      }
+
+      const claimRecord = buildClaimRecord(carpark, user, requestedDate, costsToken);
+      setPendingCell(dateKey, carpark, { type: "claim", claim: claimRecord });
+      render();
+
+      const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
+
+      try {
+        const updatedBookings = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
+          const snap = await transaction.get(docRef);
+          const current = snap.exists() ? snap.data().bookings || {} : {};
+          const existing = current?.[dateKey]?.[carpark];
+
+          if (isPastDailyCutoffForDate(requestedDate)) throw new Error("Bookings close at 5:00 pm for that day.");
+          if (existing) throw new Error(`Carpark ${carpark} is already taken.`);
+          if (userUsedOnDate(current, dateKey, user)) throw new Error("You have already claimed a carpark on this day.");
+          if (costsToken && getTokensRemainingForWeek(requestedDate, current, user) <= 0) {
+            throw new Error("You have no tokens left for that week.");
+          }
+
+          current[dateKey] ??= {};
+          current[dateKey][carpark] = claimRecord;
+
+          transaction.set(docRef, { bookings: current });
+          return current;
+        });
+
+        bookingSnapshotHoldUntil = Date.now() + BOOKING_SNAPSHOT_HOLD_MS;
+        bookings = updatedBookings;
+        pendingBookingCells.delete(key);
+        render();
+        await addBookingLog("booking-added", {
+          carpark,
+          dateKey,
+          dateDisplay: formatShortDate(requestedDate),
+          targetName: user.name,
+          targetUserId: user.id,
+          bookingMode: claimRecord.mode,
+          tokenCost: claimRecord.tokenCost
+        }, user);
+        showToast(claimSuccessMessage(carpark, requestedDate, costsToken));
+        return true;
+      } catch (error) {
+        pendingBookingCells.delete(key);
+        render();
+        showToast(error.message || "Could not claim carpark.");
+        return false;
+      }
+    }
+
+    async function animateAndClaimCarpark(parkEl, dateKey, carpark) {
+      if (!parkEl || parkEl.classList.contains("claiming") || hasPendingCell(dateKey, carpark)) return;
+
+      const user = getSelectedUser();
+      const wasShortNoticeAvailable = parkEl.classList.contains("short-notice-available");
+      const displayName = user?.name || "You";
+
+      parkEl.className = "park taken claiming";
+      parkEl.innerHTML = `
+        <div class="park-no">${escapeHtml(carpark)}</div>
+        <div class="taken-row">
+          <span class="park-state taken-name">${escapeHtml(displayName)}</span>
+        </div>
+        <div class="claim-pop-layer ${wasShortNoticeAvailable ? "gold-pop" : ""}" aria-hidden="true">
+          <div class="park-no">${escapeHtml(carpark)}</div>
+          <div class="park-state">Free</div>
+        </div>
+      `;
+
+      await delay(180);
+      await claimCarpark(dateKey, carpark);
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function removeCarparkClaim(dateKey, carpark) {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return false;
+      }
+
+      if (hasPendingCell(dateKey, carpark)) {
+        showToast("That carpark is still updating.");
+        return false;
+      }
+
+      const key = getCellKey(dateKey, carpark);
+      const date = parseDateKey(dateKey);
+
+      if (isPastDailyCutoffForDate(date)) {
+        showToast("Cancellations close at 5:00 pm for that day.");
+        return false;
+      }
+      const docRef = firestoreApi.doc(firestoreApi.db, "carparkBookings", "allBookings");
+
+      setPendingCell(dateKey, carpark, { type: "remove" });
+      render();
+
+      try {
+        const result = await firestoreApi.runTransaction(firestoreApi.db, async (transaction) => {
+          const snap = await transaction.get(docRef);
+          const current = snap.exists() ? snap.data().bookings || {} : {};
+
+          if (isPastDailyCutoffForDate(date)) throw new Error("Cancellations close at 5:00 pm for that day.");
+          if (!current?.[dateKey]?.[carpark]) throw new Error("That claim no longer exists.");
+
+          const removedClaim = current[dateKey][carpark];
+
+          delete current[dateKey][carpark];
+          if (Object.keys(current[dateKey]).length === 0) delete current[dateKey];
+
+          transaction.set(docRef, { bookings: current });
+          return { bookings: current, removedClaim };
+        });
+
+        bookingSnapshotHoldUntil = Date.now() + BOOKING_SNAPSHOT_HOLD_MS;
+        bookings = result.bookings;
+        pendingBookingCells.delete(key);
+        render();
+        const actor = getSelectedUser();
+        const removedClaim = result.removedClaim || {};
+        await addBookingLog("booking-removed", {
+          carpark,
+          dateKey,
+          dateDisplay: formatShortDate(date),
+          targetName: getClaimDisplayName(removedClaim),
+          targetUserId: removedClaim.userId || "",
+          bookingMode: removedClaim.mode || "",
+          tokenCost: Number(removedClaim.tokenCost || 0)
+        }, actor);
+        showToast(`Carpark ${carpark} removed for ${formatShortDate(date)}. Token restored if one was used.`);
+        return true;
+      } catch (error) {
+        pendingBookingCells.delete(key);
+        render();
+        showToast(error.message || "Could not remove claim.");
+        return false;
+      }
+    }
+
+    function startPresence() {
+      if (!realtimeApi || !isAuthenticated) {
+        renderPresence([]);
+        return;
+      }
+
+      const user = getSelectedUser();
+      if (!user) {
+        renderPresence([]);
+        return;
+      }
+
+      clearCurrentPresence();
+
+      const key = `${presenceKey(user.id)}_${getBrowserId()}`;
+      currentPresenceRef = realtimeApi.ref(realtimeApi.db, `presence/${key}`);
+
+      realtimeApi.onDisconnect(currentPresenceRef).remove();
+
+      writePresenceHeartbeat(user);
+      presenceHeartbeatInterval = setInterval(() => writePresenceHeartbeat(user), PRESENCE_HEARTBEAT_MS);
+
+      const presenceListRef = realtimeApi.ref(realtimeApi.db, "presence");
+
+      unsubscribePresence?.();
+      unsubscribePresence = realtimeApi.onValue(presenceListRef, (snapshot) => {
+        const activeUsers = Object.values(snapshot.val() || {})
+          .filter(isPresenceActive)
+          .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+
+        renderPresence(activeUsers);
+      }, (error) => {
+        console.error(error);
+        renderPresence([]);
+      });
+    }
+
+    function writePresenceHeartbeat(user) {
+      if (!realtimeApi || !currentPresenceRef || !user) return;
+
+      realtimeApi.update(currentPresenceRef, {
+        name: user.name,
+        userId: user.id,
+        online: true,
+        openedAt: realtimeApi.serverTimestamp(),
+        lastSeen: realtimeApi.serverTimestamp(),
+        lastSeenMs: Date.now()
+      });
+    }
+
+    async function clearCurrentPresence() {
+      clearInterval(presenceHeartbeatInterval);
+      presenceHeartbeatInterval = null;
+
+      if (!realtimeApi || !currentPresenceRef) return;
+
+      try {
+        await realtimeApi.remove(currentPresenceRef);
+      } catch (error) {
+        console.warn("Presence removal failed", error);
+      }
+
+      currentPresenceRef = null;
+    }
+
+    function isPresenceActive(item) {
+      if (!item || !item.name) return false;
+      const lastSeenMs = Number(item.lastSeenMs || 0);
+      return lastSeenMs > 0 && Date.now() - lastSeenMs <= PRESENCE_ACTIVE_MS;
+    }
+
+    function renderPresence(activeUsers) {
+      const names = [...new Set(activeUsers.map(user => user.name).filter(Boolean))];
+
+      if (!names.length) {
+        els.presenceLine.innerHTML = `<span class="presence-label">Online</span>`;
+        return;
+      }
+
+      els.presenceLine.innerHTML =
+        `<span class="presence-label">Online</span>` +
+        names
+          .map((name, index) => `<span class="presence-chip presence-color-${index % 8}">${escapeHtml(name)}</span>`)
+          .join("");
+    }
+
+    function presenceKey(value) {
+      return String(value).replace(/[.#$\/\[\]]/g, "_");
+    }
+
+    function getBrowserId() {
+      let browserId = localStorage.getItem(BROWSER_ID_KEY);
+      if (!browserId) {
+        browserId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+        localStorage.setItem(BROWSER_ID_KEY, browserId);
+      }
+      return presenceKey(browserId);
+    }
+
+    function buildClaimRecord(carpark, user, date, costsToken) {
+      return {
+        carpark,
+        userId: user.id,
+        claimedAt: new Date().toISOString(),
+        mode: costsToken ? "weekly-token" : SHORT_NOTICE_BOOKING_MODE,
+        tokenCost: costsToken ? 1 : 0,
+        weekKey: getDateKey(getMonday(date))
+      };
+    }
+
+    function claimSuccessMessage(carpark, date, costsToken) {
+      return `Carpark ${carpark} claimed for ${formatShortDate(date)} — ${costsToken ? "1 token used" : "no token used"}.`;
+    }
+
+    async function handleRemoveClick(dateKey, carpark, claim) {
+      const selectedUser = getSelectedUser();
+      const date = parseDateKey(dateKey);
+
+      if (isPastDailyCutoffForDate(date)) {
+        showToast("Cancellations close at 5:00 pm for that day.");
+        return;
+      }
+
+      const isOwnClaim = claimBelongsToUser(claim, selectedUser);
+
+      if (isOwnClaim) {
+        await removeCarparkClaim(dateKey, carpark);
+        return;
+      }
+
+      openRemoveDialog(dateKey, carpark, claim);
+    }
+
+    function openRemoveDialog(dateKey, carpark, claim) {
+      const selectedUser = getSelectedUser();
+      const isOwnClaim = claimBelongsToUser(claim, selectedUser);
+      pendingRemoval = { dateKey, carpark, isOwnClaim };
+
+      const date = parseDateKey(dateKey);
+      const restoresToken = Number(claim.tokenCost || 0) > 0 || claim.mode === "weekly-token";
+      const displayName = getClaimDisplayName(claim);
+
+      els.removeDialogText.textContent =
+        `Remove Carpark ${carpark} for ${displayName} on ${formatShortDate(date)}? ` +
+        (restoresToken
+          ? "This will restore that person's token for that week."
+          : "This was a short notice claim, so no token will be restored.");
+
+      if (!isOwnClaim) {
+        els.removeWarningText.textContent = `Warning: this spot is not yours. It is currently booked by ${displayName}. Only remove it if you have checked with them.`;
+        els.removeWarningText.classList.add("visible");
+      } else {
+        els.removeWarningText.textContent = "";
+        els.removeWarningText.classList.remove("visible");
+      }
+
+      els.removeDialog.showModal();
+    }
+
+    function openShortNoticeDialog() {
+      const user = getSelectedUser();
+      const shortNoticeDate = getShortNoticeBookingDate();
+
+      if (!shortNoticeDate) {
+        showToast("No weekly allowance used for short-notice bookings. (Same day or 9pm the night before)");
+        return;
+      }
+
+      const shortNoticeKey = getDateKey(shortNoticeDate);
+      const available = CARPARKS.filter(park => !bookings?.[shortNoticeKey]?.[park]);
+
+      if (isWeekendDate(shortNoticeDate)) {
+        showToast("Short notice bookings are only available on weekdays.");
+        return;
+      }
+
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+
+      if (!user) {
+        openNameGate();
+        showToast("Select your name first.");
+        return;
+      }
+
+      if (userUsedOnDate(bookings, shortNoticeKey, user)) {
+        showToast(`You have already claimed a carpark for ${formatShortDate(shortNoticeDate)}.`);
+        return;
+      }
+
+      if (available.length === 0) {
+        showToast(`No carparks are available for ${formatShortDate(shortNoticeDate)}.`);
+        return;
+      }
+
+      pendingShortNoticeDateKey = shortNoticeKey;
+      els.freeParkSelect.dataset.dateKey = shortNoticeKey;
+      els.shortNoticeDialogTitle.textContent = `Short Notice Booking — ${formatShortDate(shortNoticeDate)}`;
+      els.shortNoticeSelectLabel.textContent = `Available carparks for ${formatShortDate(shortNoticeDate)}`;
+      els.freeParkSelect.innerHTML = available
+        .map(park => `<option value="${park}">Carpark ${park}</option>`)
+        .join("");
+
+      els.freeDialog.showModal();
+    }
+
+    function render() {
+      if (!isAuthenticated) return;
+
+      const user = getSelectedUser();
+      const weekStart = getMonday(addDays(new Date(), weekOffset * 7));
+      const weekEnd = addDays(weekStart, 6);
+      const weekLabel = getWeekLabel(weekOffset);
+      const isOpen = isWeekOpen(weekStart);
+      const tokensRemaining = user ? getTokensRemainingForWeek(weekStart, bookings, user) : 0;
+
+      els.allowanceWeek.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
+      els.tokenText.textContent = user ? `${tokensRemaining} left` : "No user selected";
+
+      els.weekRange.textContent = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}`;
+      els.weekContext.textContent = weekOffset === 0 ? "This week" : weekLabel;
+      els.jumpThisWeekBtn.disabled = false;
+
+      renderStatusBox(weekStart, weekLabel, isOpen);
+
+      const shortNoticeDate = getShortNoticeBookingDate();
+      const shortNoticeKey = shortNoticeDate ? getDateKey(shortNoticeDate) : "";
+      const shortNoticeInDisplayedWeek = !!shortNoticeDate && getDateKey(weekStart) <= shortNoticeKey && shortNoticeKey <= getDateKey(weekEnd);
+      const availableShortNotice = shortNoticeDate ? CARPARKS.filter(park => !bookings?.[shortNoticeKey]?.[park]) : [];
+      const userHasShortNoticeClaim = user && shortNoticeDate ? userUsedOnDate(bookings, shortNoticeKey, user) : false;
+      const showShortNoticePanel = !!shortNoticeDate && !isWeekendDate(shortNoticeDate) && (weekOffset === 0 || shortNoticeInDisplayedWeek) && availableShortNotice.length > 0 && !userHasShortNoticeClaim;
+
+      if (shortNoticeDate) {
+        els.shortNoticeLabel.textContent = `Short Notice Booking (${formatShortDate(shortNoticeDate)}):`;
+      }
+
+      els.todayPanel.classList.toggle("visible", showShortNoticePanel);
+
+      els.daysGrid.innerHTML = "";
+      for (let index = 0; index < 7; index++) {
+        const date = addDays(weekStart, index);
+        els.daysGrid.appendChild(renderDay(date));
+      }
+
+      blinkTodayIfRequested();
+    }
+
+    function blinkTodayIfRequested() {
+      if (!blinkTodayAfterRender) return;
+
+      blinkTodayAfterRender = false;
+      const todayEl = els.daysGrid.querySelector(".day.today");
+      if (!todayEl) return;
+
+      const shouldRevealHiddenWeekend =
+        window.matchMedia("(max-width: 620px)").matches &&
+        todayEl.classList.contains("weekend");
+
+      if (shouldRevealHiddenWeekend) {
+        todayEl.classList.add("mobile-today-reveal");
+      }
+
+      todayEl.classList.remove("blink-today");
+      void todayEl.offsetWidth;
+      todayEl.classList.add("blink-today");
+      todayEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+
+      let cleanupTimer = null;
+      const cleanupBlink = () => {
+        todayEl.classList.remove("blink-today");
+        if (shouldRevealHiddenWeekend) {
+          todayEl.classList.remove("mobile-today-reveal");
+        }
+        todayEl.removeEventListener("animationend", handleBlinkEnd);
+        clearTimeout(cleanupTimer);
+      };
+
+      const handleBlinkEnd = (event) => {
+        if (event.target !== todayEl) return;
+        cleanupBlink();
+      };
+
+      todayEl.addEventListener("animationend", handleBlinkEnd);
+      cleanupTimer = setTimeout(cleanupBlink, 2400);
+    }
+
+    function renderStatusBox(weekStart, weekLabel, isOpen) {
+      const showTimer = !isOpen && weekStart > getMonday(new Date());
+      els.statusBox.innerHTML = `
+        <div class="status-line">
+          <span>${weekLabel}:</span>
+          <span class="status-badge ${isOpen ? "open" : "closed"}">${isOpen ? "Open" : "Closed"}</span>
+          ${showTimer ? `<span id="weekOpenTimer" class="week-open-timer"></span>` : ""}
+        </div>
+      `;
+
+      updateWeekOpenTimer(weekStart, isOpen);
+    }
+
+    function renderDay(date) {
+      const user = getSelectedUser();
+      const dateKey = getDateKey(date);
+      const todayKey = getDateKey(new Date());
+      const isToday = dateKey === todayKey;
+      const isWeekend = isWeekendDate(date);
+
+      const day = document.createElement("article");
+      day.className = `day ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}`;
+
+      const head = document.createElement("div");
+      head.className = "day-head";
+      head.innerHTML = `
+        <div class="day-name">
+          <span class="day-name-full">${date.toLocaleDateString(undefined, { weekday: "long" })}</span>
+          <span class="day-name-short">${date.toLocaleDateString(undefined, { weekday: "short" })}</span>
+        </div>
+        <div class="date">${formatShortDate(date)}</div>
+      `;
+      day.appendChild(head);
+
+      CARPARKS.forEach((park) => {
+        const pending = getPendingCell(dateKey, park);
+        const storedClaim = bookings?.[dateKey]?.[park];
+        const claim = pending?.type === "claim" ? pending.claim : pending?.type === "remove" ? null : storedClaim;
+        const parkEl = document.createElement("div");
+
+        if (claim) {
+          parkEl.className = `park taken ${pending ? "updating" : ""}`;
+          parkEl.innerHTML = `
+            <div class="park-no">${park}</div>
+            <div class="taken-row">
+              <span class="park-state taken-name">${escapeHtml(getClaimDisplayName(claim))}</span>
+            </div>
+          `;
+
+          if (!pending && !isPastDailyCutoffForDate(date)) {
+            const removeBtn = document.createElement("button");
+            removeBtn.className = "danger park-remove-btn";
+            removeBtn.innerHTML = `<span class="remove-x" aria-hidden="true">×</span>`;
+            removeBtn.title = "Remove claim";
+            removeBtn.setAttribute("aria-label", `Remove carpark ${park} claim`);
+            removeBtn.addEventListener("click", () => handleRemoveClick(dateKey, park, claim));
+            parkEl.appendChild(removeBtn);
+          }
+        } else {
+          const costsToken = !isShortNoticeBookingDate(date);
+          const isShortNoticeCell = !costsToken;
+          const alreadyClaimedThisDay = user ? userUsedOnDate(getDisplayedBookings(), dateKey, user) : false;
+          const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, getDisplayedBookings(), user) <= 0 : true;
+          const canClaimThisCell = !pending && !isWeekend && canBookDate(date) && !!user && !alreadyClaimedThisDay && !noTokensLeft;
+
+          parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${pending ? "updating" : ""} ${isShortNoticeCell && canClaimThisCell ? "short-notice-available" : ""}`;
+          parkEl.innerHTML = `
+            <div class="park-no">${park}</div>
+            <div class="park-state">${pending ? "Updating" : "Free"}</div>
+          `;
+
+          if (canClaimThisCell) {
+            parkEl.setAttribute("role", "button");
+            parkEl.setAttribute("tabindex", "0");
+            parkEl.addEventListener("click", () => animateAndClaimCarpark(parkEl, dateKey, park));
+            parkEl.addEventListener("keydown", (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                animateAndClaimCarpark(parkEl, dateKey, park);
+              }
+            });
+          }
+        }
+
+        day.appendChild(parkEl);
+      });
+
+      return day;
+    }
+
+    function getCellKey(dateKey, carpark) {
+      return `${dateKey}::${carpark}`;
+    }
+
+    function setPendingCell(dateKey, carpark, pending) {
+      pendingBookingCells.set(getCellKey(dateKey, carpark), pending);
+    }
+
+    function getPendingCell(dateKey, carpark) {
+      return pendingBookingCells.get(getCellKey(dateKey, carpark));
+    }
+
+    function hasPendingCell(dateKey, carpark) {
+      return pendingBookingCells.has(getCellKey(dateKey, carpark));
+    }
+
+    function getDisplayedBookings() {
+      const displayed = cloneBookings(bookings);
+
+      pendingBookingCells.forEach((pending, key) => {
+        const [dateKey, carpark] = key.split("::");
+        if (!dateKey || !carpark) return;
+
+        if (pending.type === "claim" && pending.claim) {
+          displayed[dateKey] ??= {};
+          displayed[dateKey][carpark] = pending.claim;
+        }
+
+        if (pending.type === "remove") {
+          if (displayed[dateKey]) {
+            delete displayed[dateKey][carpark];
+            if (Object.keys(displayed[dateKey]).length === 0) delete displayed[dateKey];
+          }
+        }
+      });
+
+      return displayed;
+    }
+
+    function cloneBookings(source) {
+      return JSON.parse(JSON.stringify(source || {}));
+    }
+
+    function sameBookings(left, right) {
+      return JSON.stringify(left || {}) === JSON.stringify(right || {});
+    }
+
+    function updateWeekOpenTimer(weekStart, isOpen) {
+      clearInterval(weekTimerInterval);
+      const timerEl = document.querySelector("#weekOpenTimer");
+      if (isOpen || !timerEl) return;
+
+      const openDate = getWeekOpenDate(weekStart);
+
+      const tick = () => {
+        const diff = openDate - new Date();
+        if (diff <= 0) {
+          clearInterval(weekTimerInterval);
+          render();
+          return;
+        }
+        timerEl.textContent = `Opens in ${formatCountdown(diff)}`;
+      };
+
+      tick();
+      weekTimerInterval = setInterval(tick, 1000);
+    }
+
+    function formatCountdown(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const seconds = totalSeconds % 60;
+      return `${days}d ${hours}h ${seconds}s`;
+    }
+
+    function getWeekOpenDate(targetWeekStart) {
+      const openDate = new Date(targetWeekStart);
+      openDate.setDate(openDate.getDate() - 4);
+      openDate.setHours(14, 30, 0, 0);
+      return openDate;
+    }
+
+    function isWeekOpen(weekStart) {
+      const currentWeekStart = getMonday(new Date());
+      if (weekStart < currentWeekStart) return false;
+      if (getDateKey(weekStart) === getDateKey(currentWeekStart)) return true;
+      return new Date() >= getWeekOpenDate(weekStart);
+    }
+
+    function getShortNoticeBookingDate() {
+      const now = new Date();
+
+      if (!isPastDailyCutoffForDate(now) && !isWeekendDate(now)) {
+        return now;
+      }
+
+      const tomorrow = addDays(now, 1);
+
+      if (now >= getShortNoticeTomorrowOpenDate(tomorrow) && !isPastDailyCutoffForDate(tomorrow) && !isWeekendDate(tomorrow)) {
+        return tomorrow;
+      }
+
+      return null;
+    }
+
+    function isShortNoticeBookingDate(date) {
+      const shortNoticeDate = getShortNoticeBookingDate();
+      return !!shortNoticeDate && getDateKey(shortNoticeDate) === getDateKey(date);
+    }
+
+    function getShortNoticeTomorrowOpenDate(date) {
+      const openDate = new Date(date);
+      openDate.setDate(openDate.getDate() - 1);
+      openDate.setHours(SHORT_NOTICE_TOMORROW_START_HOUR, 0, 0, 0);
+      return openDate;
+    }
+
+    function canBookDate(date) {
+      if (isWeekendDate(date)) return false;
+      if (isPastDailyCutoffForDate(date)) return false;
+      const weekStart = getMonday(date);
+      return isWeekOpen(weekStart);
+    }
+
+    function isPastDailyCutoffForDate(date) {
+      return new Date() >= getDailyCutoffDate(date);
+    }
+
+    function getDailyCutoffDate(date) {
+      const cutoff = new Date(date);
+      cutoff.setHours(DAILY_BOOKING_CUTOFF_HOUR, 0, 0, 0);
+      return cutoff;
+    }
+
+    function isWeekendDate(date) {
+      return date.getDay() === 0 || date.getDay() === 6;
+    }
+
+    function getWeekLabel(offset) {
+      if (offset === 0) return "This week";
+      if (offset === -1) return "Previous week";
+      if (offset === 1) return "Next week";
+      return `${Math.abs(offset)} weeks ${offset > 0 ? "ahead" : "ago"}`;
+    }
+
+    function getSelectedUser() {
+      return USERS.find(user => user.id === els.userSelect.value) || null;
+    }
+
+    function getClaimDisplayName(claim) {
+      if (claim?.userId && usersById.has(claim.userId)) return usersById.get(claim.userId).name;
+      return claim?.person || "Unknown";
+    }
+
+    function getTokensRemainingForWeek(date, source, user) {
+      return Math.max(0, DEFAULT_WEEKLY_TOKENS - getTokenClaimsForWeek(date, source, user));
+    }
+
+    function getTokenClaimsForWeek(date, source, user) {
+      const start = getMonday(date);
+      const end = addDays(start, 6);
+      const startKey = getDateKey(start);
+      const endKey = getDateKey(end);
+      let used = 0;
+
+      Object.entries(source || {}).forEach(([dateKey, dayClaims]) => {
+        if (dateKey < startKey || dateKey > endKey) return;
+
+        Object.values(dayClaims || {}).forEach((claim) => {
+          const usesToken = Number(claim.tokenCost || 0) > 0 || claim.mode === "weekly-token";
+          if (claimBelongsToUser(claim, user) && usesToken) used += 1;
+        });
+      });
+
+      return used;
+    }
+
+    function userUsedOnDate(source, dateKey, user) {
+      return Object.values(source?.[dateKey] || {}).some(claim => claimBelongsToUser(claim, user));
+    }
+
+    function claimBelongsToUser(claim, user) {
+      if (!claim || !user) return false;
+      return claim.userId === user.id || claim.person === user.name || (user.email && claim.email === user.email);
+    }
+
+    function openAuthGate(mode = "login") {
+      els.app.classList.add("locked");
+      els.authGate.classList.add("visible");
+      els.nameGate.classList.remove("visible");
+      setAuthGateMode(mode);
+    }
+
+    function closeAuthGate() {
+      els.authGate.classList.remove("visible");
+    }
+
+    function setAuthGateMode(mode) {
+      const isValidating = mode === "validating";
+      els.authValidationView.classList.toggle("hidden", !isValidating);
+      els.authLoginView.classList.toggle("hidden", isValidating);
+
+      if (isValidating) {
+        els.authStatusText.textContent = "Checking saved login...";
+        els.pinError.textContent = "";
+        return;
+      }
+
+      setTimeout(() => els.pinInput.focus(), 0);
+    }
+
+    function openNameGate() {
+      if (!isAuthenticated) {
+        openAuthGate();
+        return;
+      }
+      els.app.classList.add("locked");
+      els.nameGate.classList.add("visible");
+    }
+
+    function closeNameGate() {
+      els.app.classList.remove("locked");
+      els.nameGate.classList.remove("visible");
+    }
+
+    function saveSelectedUserId(userId) {
+      localStorage.setItem(USER_STORAGE_KEY, userId);
+      setCookie(USER_COOKIE, userId, 365);
+    }
+
+    function getSavedSelectedUserId() {
+      return localStorage.getItem(USER_STORAGE_KEY) || getCookie(USER_COOKIE);
+    }
+
+    function clearSavedSelectedUserId() {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      setCookie(USER_COOKIE, "", -1);
+    }
+
+    function setCookie(name, value, days) {
+      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+      document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+    }
+
+    function getCookie(name) {
+      const cookieName = `${encodeURIComponent(name)}=`;
+      return document.cookie
+        .split(";")
+        .map(item => item.trim())
+        .find(item => item.startsWith(cookieName))
+        ?.slice(cookieName.length) || "";
+    }
+
+    function makeUserId(name) {
+      const base = name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 44);
+
+      return base || `user-${Date.now()}`;
+    }
+
+    function getMonday(date) {
+      const copy = new Date(date);
+      copy.setHours(0, 0, 0, 0);
+      const day = copy.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      copy.setDate(copy.getDate() + diff);
+      return copy;
+    }
+
+    function addDays(date, days) {
+      const copy = new Date(date);
+      copy.setDate(copy.getDate() + days);
+      return copy;
+    }
+
+    function getDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function parseDateKey(key) {
+      const [year, month, day] = key.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function formatShortDate(date) {
+      return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 2800);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>
