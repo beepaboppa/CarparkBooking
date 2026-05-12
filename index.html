@@ -637,24 +637,24 @@
       }
     }
 
-    .park.available.today-available {
+    .park.available.short-notice-available {
       background: linear-gradient(135deg, #fde68a, var(--gold));
       border-color: rgba(251, 191, 36, 0.75);
       color: var(--text);
     }
 
-    .park.available.today-available .park-no,
-    .park.available.today-available .park-state {
+    .park.available.short-notice-available .park-no,
+    .park.available.short-notice-available .park-state {
       color: var(--text);
     }
 
-    .park.available.today-available:hover {
+    .park.available.short-notice-available:hover {
       transform: translateY(-3px) scale(1.04);
       background: linear-gradient(135deg, #fde68a, #f59e0b);
       box-shadow: 0 12px 24px rgba(251, 191, 36, 0.28);
     }
 
-    .park.available.today-available:active {
+    .park.available.short-notice-available:active {
       transform: translateY(0) scale(0.96);
       box-shadow: 0 5px 12px rgba(251, 191, 36, 0.2);
     }
@@ -1308,10 +1308,10 @@
 
       <div id="todayPanel" class="today-panel">
         <div class="today-main">
-          <span class="today-label">Free Carpark Today:</span>
+          <span id="shortNoticeLabel" class="today-label">Short Notice Booking:</span>
           <button id="freeTodayBtn" class="gold">Claim</button>
         </div>
-        <div class="today-note">Same day bookings do not subtract from allowance</div>
+        <div id="shortNoticeNote" class="today-note">No weekly allowance used for short-notice bookings: same-day before 5:00 pm, or next-day from 9:00 pm the night before.</div>
       </div>
 
       <div id="daysGrid" class="days"></div>
@@ -1398,11 +1398,11 @@
     <form method="dialog" class="modal-content">
       <div>
         <p class="small-label">Choose available carpark</p>
-        <h3 class="modal-title">Free Carpark Today</h3>
+        <h3 id="shortNoticeDialogTitle" class="modal-title">Short Notice Booking</h3>
       </div>
 
       <div>
-        <label for="freeParkSelect">Available today</label>
+        <label id="shortNoticeSelectLabel" for="freeParkSelect">Available carparks</label>
         <select id="freeParkSelect"></select>
       </div>
 
@@ -1525,6 +1525,8 @@
     const BUG_REPORTS_COLLECTION = "bugReports";
     const BOOKING_LOG_COLLECTION = "bookingLogs";
     const DAILY_BOOKING_CUTOFF_HOUR = 17;
+    const SHORT_NOTICE_TOMORROW_START_HOUR = 21;
+    const SHORT_NOTICE_BOOKING_MODE = "short-notice";
     const RECENT_LIST_LIMIT = 50;
     const PRESENCE_ACTIVE_MS = 2 * 60 * 1000;
     const PRESENCE_HEARTBEAT_MS = 25 * 1000;
@@ -1565,6 +1567,10 @@
       weekRange: document.querySelector("#weekRange"),
       weekContext: document.querySelector("#weekContext"),
       todayPanel: document.querySelector("#todayPanel"),
+      shortNoticeLabel: document.querySelector("#shortNoticeLabel"),
+      shortNoticeNote: document.querySelector("#shortNoticeNote"),
+      shortNoticeDialogTitle: document.querySelector("#shortNoticeDialogTitle"),
+      shortNoticeSelectLabel: document.querySelector("#shortNoticeSelectLabel"),
       freeTodayBtn: document.querySelector("#freeTodayBtn"),
       freeDialog: document.querySelector("#freeDialog"),
       freeParkSelect: document.querySelector("#freeParkSelect"),
@@ -1615,6 +1621,7 @@
     let currentSelectedUserId = "";
     let loggedLoginForUserId = "";
     let activeLogTab = "activity";
+    let pendingShortNoticeDateKey = "";
 
     init();
 
@@ -1894,7 +1901,7 @@
         render();
       });
 
-      els.freeTodayBtn.addEventListener("click", openFreeTodayDialog);
+      els.freeTodayBtn.addEventListener("click", openShortNoticeDialog);
       els.bugOpenBtn.addEventListener("click", openBugSidebar);
       els.bugCloseBtn.addEventListener("click", closeBugSidebar);
       els.bugSidebarShell.addEventListener("click", (event) => {
@@ -1916,8 +1923,10 @@
       els.confirmFreeBtn.addEventListener("click", async (event) => {
         event.preventDefault();
         const carpark = els.freeParkSelect.value;
+        const dateKey = pendingShortNoticeDateKey || els.freeParkSelect.dataset.dateKey || getDateKey(new Date());
         if (!carpark) return;
-        await claimCarpark(getDateKey(new Date()), carpark);
+        await claimCarpark(dateKey, carpark);
+        pendingShortNoticeDateKey = "";
         els.freeDialog.close();
       });
 
@@ -2342,9 +2351,8 @@
 
     async function claimCarpark(dateKey, carpark) {
       const user = getSelectedUser();
-      const todayKey = getDateKey(new Date());
       const requestedDate = parseDateKey(dateKey);
-      const costsToken = dateKey !== todayKey;
+      const costsToken = !isShortNoticeBookingDate(requestedDate);
       const key = getCellKey(dateKey, carpark);
 
       if (hasPendingCell(dateKey, carpark)) {
@@ -2426,7 +2434,7 @@
       if (!parkEl || parkEl.classList.contains("claiming") || hasPendingCell(dateKey, carpark)) return;
 
       const user = getSelectedUser();
-      const wasTodayAvailable = parkEl.classList.contains("today-available");
+      const wasShortNoticeAvailable = parkEl.classList.contains("short-notice-available");
       const displayName = user?.name || "You";
 
       parkEl.className = "park taken claiming";
@@ -2435,7 +2443,7 @@
         <div class="taken-row">
           <span class="park-state taken-name">${escapeHtml(displayName)}</span>
         </div>
-        <div class="claim-pop-layer ${wasTodayAvailable ? "gold-pop" : ""}" aria-hidden="true">
+        <div class="claim-pop-layer ${wasShortNoticeAvailable ? "gold-pop" : ""}" aria-hidden="true">
           <div class="park-no">${escapeHtml(carpark)}</div>
           <div class="park-state">Free</div>
         </div>
@@ -2618,7 +2626,7 @@
         carpark,
         userId: user.id,
         claimedAt: new Date().toISOString(),
-        mode: costsToken ? "weekly-token" : "free-today",
+        mode: costsToken ? "weekly-token" : SHORT_NOTICE_BOOKING_MODE,
         tokenCost: costsToken ? 1 : 0,
         weekKey: getDateKey(getMonday(date))
       };
@@ -2660,7 +2668,7 @@
         `Remove Carpark ${carpark} for ${displayName} on ${formatShortDate(date)}? ` +
         (restoresToken
           ? "This will restore that person's token for that week."
-          : "This was a free same-day claim, so no token will be restored.");
+          : "This was a short notice claim, so no token will be restored.");
 
       if (!isOwnClaim) {
         els.removeWarningText.textContent = `Warning: this spot is not yours. It is currently booked by ${displayName}. Only remove it if you have checked with them.`;
@@ -2673,19 +2681,20 @@
       els.removeDialog.showModal();
     }
 
-    function openFreeTodayDialog() {
+    function openShortNoticeDialog() {
       const user = getSelectedUser();
-      const today = new Date();
-      const todayKey = getDateKey(today);
-      const available = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
+      const shortNoticeDate = getShortNoticeBookingDate();
 
-      if (isPastDailyCutoffForDate(today)) {
-        showToast("Bookings close at 5:00 pm for today.");
+      if (!shortNoticeDate) {
+        showToast("Short notice bookings are available for today before 5:00 pm, or tomorrow after 9:00 pm.");
         return;
       }
 
-      if (isWeekendDate(today)) {
-        showToast("Free Carpark Today is only available on weekdays.");
+      const shortNoticeKey = getDateKey(shortNoticeDate);
+      const available = CARPARKS.filter(park => !bookings?.[shortNoticeKey]?.[park]);
+
+      if (isWeekendDate(shortNoticeDate)) {
+        showToast("Short notice bookings are only available on weekdays.");
         return;
       }
 
@@ -2700,16 +2709,20 @@
         return;
       }
 
-      if (userUsedOnDate(bookings, todayKey, user)) {
-        showToast("You have already claimed a carpark today.");
+      if (userUsedOnDate(bookings, shortNoticeKey, user)) {
+        showToast(`You have already claimed a carpark for ${formatShortDate(shortNoticeDate)}.`);
         return;
       }
 
       if (available.length === 0) {
-        showToast("No free carparks are available today.");
+        showToast(`No carparks are available for ${formatShortDate(shortNoticeDate)}.`);
         return;
       }
 
+      pendingShortNoticeDateKey = shortNoticeKey;
+      els.freeParkSelect.dataset.dateKey = shortNoticeKey;
+      els.shortNoticeDialogTitle.textContent = `Short Notice Booking — ${formatShortDate(shortNoticeDate)}`;
+      els.shortNoticeSelectLabel.textContent = `Available carparks for ${formatShortDate(shortNoticeDate)}`;
       els.freeParkSelect.innerHTML = available
         .map(park => `<option value="${park}">Carpark ${park}</option>`)
         .join("");
@@ -2736,14 +2749,19 @@
 
       renderStatusBox(weekStart, weekLabel, isOpen);
 
-      const today = new Date();
-      const todayKey = getDateKey(today);
-      const todayIsWeekend = isWeekendDate(today);
-      const todayIsVisible = getDateKey(weekStart) <= todayKey && todayKey <= getDateKey(weekEnd);
-      const availableToday = CARPARKS.filter(park => !bookings?.[todayKey]?.[park]);
-      const userHasTodayClaim = user ? userUsedOnDate(bookings, todayKey, user) : false;
-      const todayBookingClosed = isPastDailyCutoffForDate(today);
-      els.todayPanel.classList.toggle("visible", !todayBookingClosed && !todayIsWeekend && todayIsVisible && availableToday.length > 0 && !userHasTodayClaim && weekOffset === 0);
+      const shortNoticeDate = getShortNoticeBookingDate();
+      const shortNoticeKey = shortNoticeDate ? getDateKey(shortNoticeDate) : "";
+      const shortNoticeInDisplayedWeek = !!shortNoticeDate && getDateKey(weekStart) <= shortNoticeKey && shortNoticeKey <= getDateKey(weekEnd);
+      const availableShortNotice = shortNoticeDate ? CARPARKS.filter(park => !bookings?.[shortNoticeKey]?.[park]) : [];
+      const userHasShortNoticeClaim = user && shortNoticeDate ? userUsedOnDate(bookings, shortNoticeKey, user) : false;
+      const showShortNoticePanel = !!shortNoticeDate && !isWeekendDate(shortNoticeDate) && (weekOffset === 0 || shortNoticeInDisplayedWeek) && availableShortNotice.length > 0 && !userHasShortNoticeClaim;
+
+      if (shortNoticeDate) {
+        els.shortNoticeLabel.textContent = `Short Notice Booking (${formatShortDate(shortNoticeDate)}):`;
+        els.shortNoticeNote.textContent = "No weekly allowance used for short-notice bookings: same-day before 5:00 pm, or next-day from 9:00 pm the night before.";
+      }
+
+      els.todayPanel.classList.toggle("visible", showShortNoticePanel);
 
       els.daysGrid.innerHTML = "";
       for (let index = 0; index < 7; index++) {
@@ -2852,12 +2870,13 @@
             parkEl.appendChild(removeBtn);
           }
         } else {
-          const costsToken = dateKey !== todayKey;
+          const costsToken = !isShortNoticeBookingDate(date);
+          const isShortNoticeCell = !costsToken;
           const alreadyClaimedThisDay = user ? userUsedOnDate(getDisplayedBookings(), dateKey, user) : false;
           const noTokensLeft = user ? costsToken && getTokensRemainingForWeek(date, getDisplayedBookings(), user) <= 0 : true;
           const canClaimThisCell = !pending && !isWeekend && canBookDate(date) && !!user && !alreadyClaimedThisDay && !noTokensLeft;
 
-          parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${pending ? "updating" : ""} ${isToday && canClaimThisCell ? "today-available" : ""}`;
+          parkEl.className = `park available ${canClaimThisCell ? "bookable" : "disabled"} ${pending ? "updating" : ""} ${isShortNoticeCell && canClaimThisCell ? "short-notice-available" : ""}`;
           parkEl.innerHTML = `
             <div class="park-no">${park}</div>
             <div class="park-state">${pending ? "Updating" : "Free"}</div>
@@ -2970,6 +2989,34 @@
       if (weekStart < currentWeekStart) return false;
       if (getDateKey(weekStart) === getDateKey(currentWeekStart)) return true;
       return new Date() >= getWeekOpenDate(weekStart);
+    }
+
+    function getShortNoticeBookingDate() {
+      const now = new Date();
+
+      if (!isPastDailyCutoffForDate(now) && !isWeekendDate(now)) {
+        return now;
+      }
+
+      const tomorrow = addDays(now, 1);
+
+      if (now >= getShortNoticeTomorrowOpenDate(tomorrow) && !isPastDailyCutoffForDate(tomorrow) && !isWeekendDate(tomorrow)) {
+        return tomorrow;
+      }
+
+      return null;
+    }
+
+    function isShortNoticeBookingDate(date) {
+      const shortNoticeDate = getShortNoticeBookingDate();
+      return !!shortNoticeDate && getDateKey(shortNoticeDate) === getDateKey(date);
+    }
+
+    function getShortNoticeTomorrowOpenDate(date) {
+      const openDate = new Date(date);
+      openDate.setDate(openDate.getDate() - 1);
+      openDate.setHours(SHORT_NOTICE_TOMORROW_START_HOUR, 0, 0, 0);
+      return openDate;
     }
 
     function canBookDate(date) {
