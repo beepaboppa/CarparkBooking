@@ -1344,7 +1344,7 @@
 
       <div id="todayPanel" class="today-panel">
         <div class="today-main">
-          <span id="shortNoticeLabel" class="today-label">Short Notice Booking:</span>
+          <span id="shortNoticeLabel" class="today-label">Short Notice Booking Available:</span>
           <button id="freeTodayBtn" class="gold">Claim</button>
         </div>
       </div>
@@ -2791,7 +2791,7 @@
       const showShortNoticePanel = !!shortNoticeDate && !isWeekendDate(shortNoticeDate) && (weekOffset === 0 || shortNoticeInDisplayedWeek) && availableShortNotice.length > 0 && !userHasShortNoticeClaim;
 
       if (shortNoticeDate) {
-        els.shortNoticeLabel.textContent = `Short Notice Booking (${formatShortDate(shortNoticeDate)}):`;
+        els.shortNoticeLabel.textContent = `Short Notice Booking Available (${formatShortDate(shortNoticeDate)}):`;
       }
 
       els.todayPanel.classList.toggle("visible", showShortNoticePanel);
